@@ -95,7 +95,12 @@ async function generateWithOpenAI(plan: GenerationPlan, batch: BatchPlan, existi
     input: prompt,
   });
 
-  const text = res.output_text?.trim();
+  const compatibilityText =
+    // Responses API primary field:
+    res.output_text?.trim() ??
+    // Compatibility fallback if shape differs:
+    (res as unknown as { choices?: Array<{ message?: { content?: string } }> }).choices?.[0]?.message?.content?.trim();
+  const text = compatibilityText;
   if (!text) throw new Error("OpenAI returned empty response");
   const parsed = JSON.parse(text) as { questions?: PracticeQuestion[] };
   if (!Array.isArray(parsed.questions)) throw new Error("OpenAI response missing questions array");

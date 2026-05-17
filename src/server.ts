@@ -15,6 +15,25 @@ import {
 
 const app = express();
 app.use(express.json({ limit: "2mb" }));
+
+const requestTracker = new Map<string, { count: number; resetAt: number }>();
+app.use((req, res, next) => {
+  const key = `${req.ip}:${req.path}`;
+  const now = Date.now();
+  const windowMs = 60_000;
+  const maxPerWindow = 120;
+  const bucket = requestTracker.get(key);
+  if (!bucket || now > bucket.resetAt) {
+    requestTracker.set(key, { count: 1, resetAt: now + windowMs });
+    return next();
+  }
+  if (bucket.count >= maxPerWindow) {
+    return res.status(429).json({ error: "Rate limit exceeded" });
+  }
+  bucket.count += 1;
+  requestTracker.set(key, bucket);
+  return next();
+});
 app.use(express.static(path.join(process.cwd(), "public")));
 
 app.post("/api/exams/blueprint", (req, res) => {
@@ -73,10 +92,6 @@ app.get("/api/exams/:id", async (req, res) => {
   const exam = await getExam(req.params.id);
   if (!exam) return res.status(404).json({ error: "Exam not found" });
   return res.json(exam);
-});
-
-app.get(/.*/, (_req, res) => {
-  res.sendFile(path.join(process.cwd(), "public", "index.html"));
 });
 
 const port = Number(process.env.PORT || 3000);
