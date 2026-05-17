@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GH-600 Practice App</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main>
+      <h1>GH-600 Practice App (Phase 1)</h1>
+
+      <section id="setup">
+        <h2>Home / Setup</h2>
+        <label>Question count <input id="questionCount" type="number" min="1" value="30" /></label>
+        <label>Mode
+          <select id="mode"><option value="exam">Exam mode</option><option value="review">Review mode</option></select>
+        </label>
+        <button id="generateBtn">Generate</button>
+      </section>
+
+      <section id="progress">
+        <h2>Generation progress</h2>
+        <pre id="progressLog"></pre>
+      </section>
+
+      <section id="exam" class="hidden">
+        <h2>Exam</h2>
+        <div id="timer"></div>
+        <div id="question"></div>
+        <button id="prevBtn">Prev</button>
+        <button id="nextBtn">Next</button>
+        <button id="flagBtn">Flag</button>
+        <button id="submitBtn">Submit</button>
+      </section>
+
+      <section id="review" class="hidden">
+        <h2>Review</h2>
+        <div id="reviewContent"></div>
+      </section>
+
+      <section id="analytics" class="hidden">
+        <h2>Analytics</h2>
+        <pre id="analyticsContent"></pre>
+      </section>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
