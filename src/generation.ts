@@ -118,8 +118,8 @@ async function generateWithOpenAI(plan: GenerationPlan, batch: BatchPlan, existi
   if (isReasoningModel) {
     const params: Parameters<typeof client.responses.create>[0] = {
       model: config.model,
-      text: { format: { type: "json_object" } },
-      // Pass system + user as a message array so the system persona is separate
+      // NOTE: web_search_preview is incompatible with json_object format mode.
+      // The system prompt instructs the model to output only valid JSON, which is sufficient.
       input: [
         { type: "message" as const, role: "system" as const, content: system },
         { type: "message" as const, role: "user" as const, content: user },
@@ -147,8 +147,15 @@ async function generateWithOpenAI(plan: GenerationPlan, batch: BatchPlan, existi
 
   if (!text) throw new Error("OpenAI returned empty response");
 
-  // Strip accidental markdown code fences
+  // Strip markdown code fences the model might wrap around JSON
   text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+
+  // If the model prefixed prose before the JSON block, find the first { and last }
+  const jsonStart = text.indexOf("{");
+  const jsonEnd = text.lastIndexOf("}");
+  if (jsonStart > 0 && jsonEnd > jsonStart) {
+    text = text.slice(jsonStart, jsonEnd + 1);
+  }
 
   const parsed = JSON.parse(text) as { questions?: PracticeQuestion[] };
   if (!Array.isArray(parsed.questions)) throw new Error("OpenAI response missing questions array");

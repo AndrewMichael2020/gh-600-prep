@@ -17,14 +17,13 @@ const state = {
 // ── View routing ────────────────────────────────────────────────────
 function showView(id) {
   document.querySelectorAll(".view").forEach((v) => {
-    v.classList.toggle("active", v.id === id);
-    if (v.id !== "view-exam") v.style.display = "";
+    const isTarget = v.id === id;
+    v.classList.toggle("active", isTarget);
+    // Each #view-* has display:flex via ID selector (beats .view { display:none }).
+    // Only .hidden { display:none !important } can override it, so we must
+    // explicitly add/remove .hidden rather than relying on CSS class precedence.
+    v.classList.toggle("hidden", !isTarget);
   });
-  // view-exam uses flex layout
-  const examView = document.getElementById("view-exam");
-  if (id === "view-exam") {
-    examView.style.display = "flex";
-  }
 }
 
 // ── Initialise setup view ───────────────────────────────────────────
