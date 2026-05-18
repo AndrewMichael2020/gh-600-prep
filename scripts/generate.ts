@@ -12,7 +12,7 @@
 
 import { assembleExam, createPlan, generateBatch, validateBatch } from "../src/generation.js";
 import { saveExam } from "../src/persistence.js";
-import { PracticeQuestion } from "../src/types.js";
+import { CaseStudy, PracticeQuestion } from "../src/types.js";
 
 const args = process.argv.slice(2);
 const countArg = args.indexOf("--count");
@@ -32,6 +32,7 @@ console.log(`\n🔧  Generating ${questionCount}-question GH-600 practice exam�
 
 const plan = createPlan(questionCount);
 const allQuestions: PracticeQuestion[] = [];
+const allCaseStudies: CaseStudy[] = [];
 
 for (let i = 0; i < plan.batches.length; i++) {
   const batch = plan.batches[i];
@@ -41,15 +42,16 @@ for (let i = 0; i < plan.batches.length; i++) {
 
   process.stdout.write(`  [${i + 1}/${plan.batches.length}] ${label}… `);
 
-  const generated = await generateBatch(plan, batch, allQuestions.map((q) => q.stem));
+  const { questions: generated, caseStudy } = await generateBatch(plan, batch, allQuestions.map((q) => q.stem));
   const validated = validateBatch(generated);
   const accepted = validated.filter((q) => q.metadata.validationStatus !== "rejected");
   allQuestions.push(...(accepted as PracticeQuestion[]));
+  if (caseStudy) allCaseStudies.push(caseStudy);
 
   console.log(`✅  ${accepted.length} questions accepted (running total: ${allQuestions.length})`);
 }
 
-const exam = assembleExam(plan, allQuestions, []);
+const exam = assembleExam(plan, allQuestions, allCaseStudies);
 await saveExam(exam);
 
 console.log(`\n✅  Exam saved  id=${exam.id}  questions=${exam.questions.length}\n`);

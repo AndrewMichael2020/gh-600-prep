@@ -86,7 +86,8 @@ function caseStudyCount(total: number): number {
   if (total >= 100) return 4;
   if (total >= 70) return 3;
   if (total >= 30) return 2;
-  if (total >= 25) return 1;
+  if (total >= 20) return 2;
+  if (total >= 10) return 1;
   return 0;
 }
 
