@@ -1,0 +1,8 @@
+body { font-family: sans-serif; margin: 0; padding: 1rem; background: #f7f7f9; }
+main { max-width: 900px; margin: 0 auto; background: #fff; padding: 1rem; border-radius: 10px; }
+section { margin-bottom: 1.2rem; }
+.hidden { display: none; }
+pre { background: #111; color: #0f0; padding: 0.75rem; max-height: 180px; overflow: auto; }
+.question-card { border: 1px solid #ddd; border-radius: 8px; padding: 0.8rem; margin-top: 0.5rem; }
+.option { display: block; margin: 0.25rem 0; }
+.artifact { background: #f1f5f9; padding: 0.6rem; white-space: pre-wrap; border-radius: 6px; }

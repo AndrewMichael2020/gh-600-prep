@@ -2,6 +2,84 @@
 
 Preparing for GH-600 (beta).
 
+## Current implementation (Phase 1 vertical slice)
+
+This repository now includes a minimal full-stack TypeScript app that can:
+
+- Generate a configurable GH-600 practice set (30, 70, 100, or custom count)
+- Build a weighted domain/item-type blueprint
+- Generate questions in batches (not one-shot)
+- Validate batches and assemble a final exam
+- Persist exams/attempts to local JSON files
+- Run timed exam mode (`time_minutes = question_count * 1.2`)
+- Hide answers during exam mode, then show collapsible explanations in review
+- Show score + domain breakdown analytics
+
+## Quick start
+
+### 1) Install
+
+```bash
+npm install
+```
+
+### 2) Configure environment
+
+Create `.env` (or export environment variables):
+
+```bash
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-5.5
+OPENAI_REASONING_EFFORT=medium
+OPENAI_REVIEW_REASONING_EFFORT=high
+```
+
+`OPENAI_API_KEY` is server-side only and is never exposed in frontend code.  
+If no key is provided, the app uses a safe local fallback generator for development.
+
+### 3) Run locally
+
+```bash
+npm run dev
+```
+
+Open: `http://localhost:3000`
+
+### 4) Test and build
+
+```bash
+npm test
+npm run build
+```
+
+## API endpoints
+
+- `POST /api/exams/blueprint`
+- `POST /api/questions/generate-batch`
+- `POST /api/questions/validate-batch`
+- `POST /api/exams/assemble`
+- `POST /api/attempts`
+- `GET /api/attempts/:id`
+- `GET /api/exams/:id`
+
+## Prompt templates
+
+Prompt templates are stored under `/prompts`:
+
+- `blueprint.prompt.md`
+- `generate-batch.prompt.md`
+- `generate-case-study.prompt.md`
+- `validate-question.prompt.md`
+- `anti-bias-review.prompt.md`
+- `assemble-exam.prompt.md`
+- `weakness-drill.prompt.md`
+
+## Limitations (Phase 1)
+
+- Generation quality is best with an OpenAI API key configured.
+- Matching/sequence UI is still baseline (fully advanced interactions are Phase 2).
+- Analytics currently focuses on overall score, domain score, and incorrect list.
+
 ## Plan: Personal GH-600 Prep App (100 tough simulated questions)
 
 ### 1) Objective
