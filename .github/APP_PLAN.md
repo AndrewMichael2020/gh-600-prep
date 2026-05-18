@@ -1,4 +1,185 @@
-# GH-600 Prep App Plan (Restored from Original Issue #2)
+# GH-600 Prep — App Plan
+
+Canonical planning reference for this repository.
+
+---
+
+## Architecture: dev-generation vs. user-facing exam UI
+
+**This is the single most important design decision in the app.**
+
+| Mode | Who uses it | What it does |
+|------|-------------|--------------|
+| **Dev / generate** | Developers only | Calls OpenAI API → generates practice exam → saves to `data/exams/` |
+| **User / exam UI** | End users | Loads pre-generated exams from `data/` — zero OpenAI calls at runtime |
+| **Test** | CI / Vitest | Uses fixture questions from `tests/fixtures/questions.ts` — never calls OpenAI |
+
+### Invariants that must never be broken
+
+- The `OPENAI_API_KEY` **never reaches the browser** under any circumstance.
+- `generateBatch()` throws immediately if called without an API key — no silent fallback, no test bypass.
+- Fixture questions (`tests/fixtures/questions.ts`) are imported **only** by test files — never by production code.
+- Users always see a fast, deterministic exam loaded from `data/`; they never trigger generation.
+
+### Developer workflow
+
+```bash
+# refresh knowledge base from official docs (run periodically or after doc updates)
+npm run fetch-knowledge
+
+# generate a practice exam (requires .env with OPENAI_API_KEY)
+npm run generate              # default 30 questions
+npm run generate -- --count 100
+
+# start the server
+npm run dev        # development (tsx, live reload)
+npm start          # production (compiled dist/)
+```
+
+### User workflow
+
+1. Open `http://localhost:3000` (or deployed URL).
+2. Home page lists all pre-generated exams with date and question count.
+3. Click **Take Exam** → timed exam → results, review, analytics.
+4. The "Generate New Exam" form is shown **only** when the server has `OPENAI_API_KEY` set (`/api/config → hasApiKey: true`). Production deployments without the key show the exam list only.
+
+---
+
+## API surface
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /healthz` | Liveness probe — returns `{ ok: true }` |
+| `GET /api/config` | Returns `{ hasApiKey, examCount }` — UI uses this to decide what to render |
+| `GET /api/exams` | Lists stored exams `[{ id, createdAt, questionCount }]` |
+| `GET /api/exams/:id` | Full exam payload |
+| `GET /api/exams/generate` (SSE) | Dev only — streams generation progress, saves result |
+
+> **Route ordering**: `/api/exams/generate` must be registered **before** `/api/exams/:id` in Express or "generate" is matched as `:id`.
+
+---
+
+## Knowledge base & prompt system
+
+Generation is grounded in official documentation loaded from disk:
+
+```
+prompts/
+  generate-batch.prompt.md      ← main template; split at <!-- END_SYSTEM -->
+  knowledge/
+    gh-600-study-guide.md       ← full official skills outline with exact domain names + sub-skills
+    domain-A.md                 ← deep-dive for Domain A (SDLC integration)
+    domain-B.md                 ← Domain B (tool use, MCP, environment)
+    domain-C.md                 ← Domain C (memory, state, execution)
+    domain-D.md                 ← Domain D (evaluation, error analysis, tuning)
+    domain-E.md                 ← Domain E (multi-agent coordination)
+    domain-F.md                 ← Domain F (guardrails, accountability)
+```
+
+`npm run fetch-knowledge` re-fetches all 11 official sources (GitHub Docs + Microsoft Learn) and rewrites the knowledge files. Run it when docs update.
+
+During generation, `loadDomainKnowledge(domainId)` reads the relevant file and injects it into `{{DOMAIN_KNOWLEDGE}}` in the prompt template. The model also has `web_search_preview` enabled so it can look up specific documentation snippets autonomously during generation.
+
+---
+
+## Official GH-600 domain names
+
+These are the **exact** names from the study guide. Use them verbatim everywhere.
+
+| ID | Name | Weight |
+|----|------|--------|
+| A | Prepare agent architecture and SDLC processes | 15–20% |
+| B | Implement tool use and environment interaction | 20–25% |
+| C | Manage memory, state, and execution | 10–15% |
+| D | Perform evaluation, error analysis, and tuning | 15–20% |
+| E | Orchestrate multi-agent coordination | 15–20% |
+| F | Implement guardrails and accountability | 10–15% |
+
+Study guide: <https://learn.microsoft.com/en-us/credentials/certifications/resources/study-guides/gh-600>
+
+---
+
+## Generation model
+
+| Setting | Value |
+|---------|-------|
+| Model | `gpt-5.5` (configurable via `OPENAI_MODEL`) |
+| API | OpenAI Responses API (`client.responses.create`) |
+| Reasoning | `effort: "medium"` (configurable via `OPENAI_REASONING_EFFORT`) |
+| Web search | `web_search_preview` tool enabled — model can look up docs during generation |
+| Output format | `text.format.type: "json_object"` |
+
+---
+
+## Domain weighting (100-question blueprint)
+
+```json
+[
+  { "id": "A", "name": "Prepare agent architecture and SDLC processes", "count": 18 },
+  { "id": "B", "name": "Implement tool use and environment interaction",  "count": 23 },
+  { "id": "C", "name": "Manage memory, state, and execution",             "count": 12 },
+  { "id": "D", "name": "Perform evaluation, error analysis, and tuning",  "count": 17 },
+  { "id": "E", "name": "Orchestrate multi-agent coordination",             "count": 18 },
+  { "id": "F", "name": "Implement guardrails and accountability",          "count": 12 }
+]
+```
+
+Scales proportionally for other question counts.
+
+---
+
+## Item type blueprint (100-question default)
+
+```json
+{
+  "single_choice": 42,
+  "multi_select": 18,
+  "sequence_order": 10,
+  "matching_magnet": 8,
+  "case_study": 16,
+  "code_or_config_artifact": 6
+}
+```
+
+Rules: always include ≥1 case study if total ≥ 25; ≥1 artifact if total ≥ 20; multi-select if total ≥ 10.
+
+---
+
+## Product principles
+
+- **Scenario-first questions**: every stem presents a realistic situation before asking.
+- **Judgment over recall**: test decision-making, not definition memorization.
+- **Defensible answers**: every correct answer is traceable to official GitHub/Microsoft documentation.
+- **Honest distractors**: every wrong option represents a real mistake teams actually make — no straw men.
+- **No real exam reproduction**: this is an original study tool, not a braindump.
+- **Anti-bias**: correct answer positions balanced across A/B/C/D; longest option correct ≤30% of the time.
+
+---
+
+## Phase delivery plan
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| 1 | ✅ Done | Configurable batched generation, exam/review/score, persistence |
+| 2 | ✅ Done | Analytics, confidence tracking, weakness drills, anti-bias |
+| 3 | ✅ Done | Full mock ops, 100-question validated flow |
+| 3.5 | ✅ Done | Architecture hardening, dev-only generation, UI redesign, real API confirmed |
+| 3.6 | ✅ Done | Web-grounded generation, knowledge base, fallback removal, web search |
+| 4 | 🔲 Next | Cloud Run deployment |
+
+---
+
+## Phase 4 — Cloud Run deployment checklist
+
+- [ ] `npm test` passes (no API key needed)
+- [ ] `npm run build` passes
+- [ ] `npm run generate` produces ≥1 exam in `data/exams/`
+- [ ] Docker image builds locally (`docker build -t gh-600-prep .`)
+- [ ] Image pushed to Artifact Registry
+- [ ] Cloud Run service created with `OPENAI_API_KEY` from Secret Manager
+- [ ] `/healthz` returns `{ ok: true }` on deployed URL
+- [ ] Home page lists pre-generated exams at deployed URL
+
 
 This file restores the original detailed plan content as the canonical planning reference for this repository.
 

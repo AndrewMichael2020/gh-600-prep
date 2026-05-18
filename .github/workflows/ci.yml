@@ -2,11 +2,13 @@ name: CI
 
 on:
   push:
+    branches: ["**"]
   pull_request:
   workflow_dispatch:
 
 jobs:
-  test-and-build:
+  test:
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -22,11 +24,43 @@ jobs:
         run: npm ci
 
       - name: Run tests
+        # No OPENAI_API_KEY needed — tests use fixture questions in tests/fixtures/
+        # and never call generateBatch (which requires a real API key).
         run: npm test
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+  build:
+    name: TypeScript build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Build
         run: npm run build
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Verify knowledge base present
+        run: |
+          count=$(ls prompts/knowledge/domain-*.md 2>/dev/null | wc -l)
+          echo "Domain knowledge files found: $count"
+          if [ "$count" -lt 6 ]; then
+            echo "⚠️  Less than 6 domain knowledge files — run 'npm run fetch-knowledge' to refresh."
+          fi
+
+  docker:
+    name: Docker build check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t gh-600-prep:ci .

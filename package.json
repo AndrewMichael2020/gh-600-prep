@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "dev": "tsx src/server.ts",
-    "generate": "npx tsx scripts/generate.ts"
+    "generate": "node --env-file=.env --import=tsx/esm scripts/generate.ts",
+    "fetch-knowledge": "node --import=tsx/esm scripts/fetch-knowledge.ts"
   },
   "keywords": [],
   "author": "",

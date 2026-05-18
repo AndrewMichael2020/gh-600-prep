@@ -1,4 +1,7 @@
 /* ── Variables ─────────────────────────────────────────────────────── */
+/* Utility: JS-toggled visibility. Must be defined before component rules. */
+.hidden { display: none !important; }
+
 :root {
   --color-bg:        #f6f8fa;
   --color-surface:   #ffffff;

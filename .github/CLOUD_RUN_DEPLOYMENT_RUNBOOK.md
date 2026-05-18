@@ -6,7 +6,7 @@ Last updated: 2026-05-18 (UTC)
 
 - [ ] `npm test` passes
 - [ ] `npm run build` passes
-- [ ] `.github/OPENAI_REAL_KEY_TEST_REPORT.md` has at least one passing real-key run row
+- [ ] `.github/OPENAI_API_USAGE.md` reviewed (API params, model, cost expectations noted)
 - [ ] Container builds locally from `Dockerfile`
 
 ## 2) Build & push container image
