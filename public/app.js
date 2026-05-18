@@ -249,6 +249,7 @@ function renderQuestion() {
   }
 
   card.innerHTML = `
+    ${renderCaseStudyPanel(q)}
     <p class="q-stem">${escHtml(q.stem)}</p>
     ${q.scenario ? `<div class="q-scenario">${escHtml(q.scenario)}</div>` : ""}
     ${artifactHtml}
@@ -346,17 +347,67 @@ function renderStructuredInteraction(q) {
   }
   if (q.type === "matching_magnet") {
     const pairs = state.answers[q.id]?.pairs ?? {};
+    const choices = q.matchChoices ?? [];
+    const showResult = state.mode === "review";
+    const correctPairs = (typeof q.correctAnswer === "object" && q.correctAnswer !== null && "pairs" in q.correctAnswer)
+      ? q.correctAnswer.pairs : {};
+
+    if (choices.length === 0) {
+      return `<div class="structured-block">
+        <p class="match-hint">Match each item to its value:</p>
+        ${q.options.map((opt) => `
+          <div class="match-row">
+            <label class="match-label">${opt.id}. ${escHtml(opt.text)}</label>
+            <input data-match-key="${opt.id}" value="${escHtml(pairs[opt.id] ?? "")}" placeholder="Enter match…" />
+          </div>
+        `).join("")}
+      </div>`;
+    }
+
     return `<div class="structured-block">
-      <p>Match each item to its value:</p>
-      ${q.options.map((opt) => `
-        <div class="match-row">
-          <label>${opt.id}. ${escHtml(opt.text)}</label>
-          <input data-match-key="${opt.id}" value="${escHtml(pairs[opt.id] ?? "")}" placeholder="Enter match…" />
-        </div>
-      `).join("")}
+      <p class="match-hint">Select the correct match for each item:</p>
+      ${q.options.map((opt) => {
+        const selected = pairs[opt.id] ?? "";
+        const correct = correctPairs[opt.id] ?? "";
+        const isCorr = showResult && selected === correct;
+        const isWrong = showResult && selected !== correct;
+        return `<div class="match-row ${showResult ? (isCorr ? "match-correct" : (selected ? "match-wrong" : "")) : ""}">
+          <label class="match-label">${escHtml(opt.text)}</label>
+          <select class="match-select" data-match-key="${opt.id}"${showResult ? " disabled" : ""}>
+            <option value="">-- Select --</option>
+            ${choices.map((c) => `<option value="${escHtml(c)}"${selected === c ? " selected" : ""}>${escHtml(c)}</option>`).join("")}
+          </select>
+          ${showResult ? `<span class="match-feedback">${isCorr ? "✅" : `❌ → ${escHtml(correct)}`}</span>` : ""}
+        </div>`;
+      }).join("")}
     </div>`;
   }
   return "";
+}
+
+function renderCaseStudyPanelMarkup(cs) {
+  if (!cs) return "";
+  const sections = (cs.sections ?? []).map((s) => `
+    <details class="cs-section" open>
+      <summary class="cs-section-heading">${escHtml(s.heading)} -</summary>
+      <div class="cs-section-body">${escHtml(s.body)}</div>
+    </details>
+  `).join("");
+  return `<div class="case-study-panel">
+    <div class="cs-header">
+      <span class="cs-badge">📋 Case study</span>
+      <span class="cs-title">${escHtml(cs.title)}</span>
+    </div>
+    ${cs.intro ? `<p class="cs-intro">${escHtml(cs.intro)}</p>` : ""}
+    ${sections}
+  </div>`;
+}
+
+function renderCaseStudyPanel(q) {
+  if (!q.caseStudyId || !state.exam?.caseStudies?.length) return "";
+  const cs = state.exam.caseStudies.find((c) => c.id === q.caseStudyId);
+  if (!cs) return "";
+  return renderCaseStudyPanelMarkup(cs);
 }
 
 function renderExplanation(q) {
@@ -508,7 +559,7 @@ function showResults() {
     D: "Evaluation & telemetry", E: "Multi-agent orchestration", F: "Guardrails & governance",
   };
   breakdown.innerHTML = Object.entries(score.byDomain).map(([domain, domScore]) => {
-    const dpct = Math.round(Number(domScore) * 100);
+    const dpct = Math.round(Number(domScore));
     const cls = dpct >= 70 ? "good" : dpct >= 50 ? "" : "bad";
     return `<div class="domain-row">
       <div class="domain-row-label">
@@ -516,7 +567,7 @@ function showResults() {
         <span>${dpct}%</span>
       </div>
       <div class="domain-bar-track">
-        <div class="domain-bar-fill ${cls}" style="width:${dpct}%"></div>
+        <div class="domain-bar-fill ${cls}" style="width:${Math.min(dpct, 100)}%"></div>
       </div>
     </div>`;
   }).join("");
@@ -559,17 +610,44 @@ function buildReviewView(filter) {
     const userLabel = user === undefined ? "(no answer)" : JSON.stringify(user);
     const correctLabel = JSON.stringify(q.correctAnswer);
     const sameAnswer = userLabel === correctLabel;
+    const cs = state.exam?.caseStudies?.find((c) => c.id === q.caseStudyId);
 
-    return `<div class="review-item ${correct ? "correct" : "wrong"}" data-correct="${correct}" data-wrong="${!correct}">
-      <div class="review-item-header" onclick="this.parentElement.querySelector('.review-body').toggleAttribute('hidden')">
-        <span class="review-num">Q${i + 1}</span>
-        <span class="review-stem">${escHtml(q.stem.slice(0, 120))}${q.stem.length > 120 ? "…" : ""}</span>
-        <span class="review-verdict">${correct ? "✅" : "❌"}</span>
-      </div>
-      <div class="review-body" hidden>
-        <p class="q-stem">${escHtml(q.stem)}</p>
-        ${q.scenario ? `<div class="q-scenario">${escHtml(q.scenario)}</div>` : ""}
-        <div class="options">
+    const optionsHtml = q.type === "matching_magnet"
+      ? (() => {
+          const pairs = user?.pairs ?? {};
+          const choices = q.matchChoices ?? [];
+          const correctPairs = (typeof q.correctAnswer === "object" && q.correctAnswer !== null && "pairs" in q.correctAnswer)
+            ? q.correctAnswer.pairs : {};
+          if (choices.length === 0) {
+            return `<div class="structured-block">
+              <p class="match-hint">Match each item to its value:</p>
+              ${q.options.map((opt) => `
+                <div class="match-row ${pairs[opt.id] === correctPairs[opt.id] ? "match-correct" : (pairs[opt.id] ? "match-wrong" : "")}">
+                  <label class="match-label">${opt.id}. ${escHtml(opt.text)}</label>
+                  <input value="${escHtml(pairs[opt.id] ?? "")}" disabled />
+                  <span class="match-feedback">${pairs[opt.id] === correctPairs[opt.id] ? "✅" : `❌ → ${escHtml(correctPairs[opt.id] ?? "")}`}</span>
+                </div>
+              `).join("")}
+            </div>`;
+          }
+          return `<div class="structured-block">
+            <p class="match-hint">Select the correct match for each item:</p>
+            ${q.options.map((opt) => {
+              const selected = pairs[opt.id] ?? "";
+              const expected = correctPairs[opt.id] ?? "";
+              const isCorr = selected === expected;
+              return `<div class="match-row ${isCorr ? "match-correct" : (selected ? "match-wrong" : "")}">
+                <label class="match-label">${escHtml(opt.text)}</label>
+                <select class="match-select" disabled>
+                  <option value="">-- Select --</option>
+                  ${choices.map((c) => `<option value="${escHtml(c)}"${selected === c ? " selected" : ""}>${escHtml(c)}</option>`).join("")}
+                </select>
+                <span class="match-feedback">${isCorr ? "✅" : `❌ → ${escHtml(expected)}`}</span>
+              </div>`;
+            }).join("")}
+          </div>`;
+        })()
+      : `<div class="options">
           ${q.options.map((opt) => {
             const isCorr = Array.isArray(q.correctAnswer) ? q.correctAnswer.includes(opt.id) : q.correctAnswer === opt.id;
             const isUser = Array.isArray(user) ? user.includes(opt.id) : user === opt.id;
@@ -581,7 +659,19 @@ function buildReviewView(filter) {
               <span>${escHtml(opt.text)}</span>
             </div>`;
           }).join("")}
-        </div>
+        </div>`;
+
+    return `<div class="review-item ${correct ? "correct" : "wrong"}" data-correct="${correct}" data-wrong="${!correct}">
+      <div class="review-item-header" onclick="this.parentElement.querySelector('.review-body').toggleAttribute('hidden')">
+        <span class="review-num">Q${i + 1}</span>
+        <span class="review-stem">${escHtml(q.stem.slice(0, 120))}${q.stem.length > 120 ? "…" : ""}</span>
+        <span class="review-verdict">${correct ? "✅" : "❌"}</span>
+      </div>
+      <div class="review-body" hidden>
+        ${renderCaseStudyPanelMarkup(cs)}
+        <p class="q-stem">${escHtml(q.stem)}</p>
+        ${q.scenario ? `<div class="q-scenario">${escHtml(q.scenario)}</div>` : ""}
+        ${optionsHtml}
         <div class="review-answers">
           ${sameAnswer
             ? `<span class="ans-same">✅ Your answer: ${userLabel}</span>`
@@ -616,13 +706,13 @@ function buildAnalyticsView() {
     D: "Evaluation & telemetry", E: "Multi-agent orchestration", F: "Guardrails & governance",
   };
   document.getElementById("analyticsBreakdown").innerHTML = Object.entries(score.byDomain).map(([d, v]) => {
-    const dpct = Math.round(Number(v) * 100);
+    const dpct = Math.round(Number(v));
     const cls = dpct >= 70 ? "good" : dpct >= 50 ? "" : "bad";
     return `<div class="domain-row">
       <div class="domain-row-label">
         <strong>Domain ${d}: ${domainNames[d] ?? d}</strong><span>${dpct}%</span>
       </div>
-      <div class="domain-bar-track"><div class="domain-bar-fill ${cls}" style="width:${dpct}%"></div></div>
+      <div class="domain-bar-track"><div class="domain-bar-fill ${cls}" style="width:${Math.min(dpct, 100)}%"></div></div>
     </div>`;
   }).join("");
 

@@ -64,13 +64,20 @@ Core principles you never violate:
 - Options are steps (option text = the step description).
 - `correctAnswer`: object with key "order": array of option IDs in correct sequence, e.g. `{"order": ["C","A","D","B"]}`
 
-### `matching_magnet`
-- Options are left-side categories to match against right-side items.
-- `correctAnswer`: object with key "pairs": map of optionId to matched item string.
+### `matching_magnet` (HOTSPOT-style dropdown matching)
+- `options` are the **rows** (left column). Use ids "row1", "row2", "row3", etc. (not A/B/C/D).
+  Each option has a label that describes the item to classify/match.
+- `matchChoices`: array of ALL possible answer strings. Include the correct answer for each row
+  PLUS 1–2 plausible distractors (so 4–6 total choices for 3 rows). Shuffle order — do not put
+  correct answers first.
+- `correctAnswer`: `{"pairs": {"row1": "exact choice string", "row2": "...", ...}}`
+- The stem describes the scenario and asks the candidate to match/classify items.
+- `explanation.whyDistractorsWrong` can be an empty object `{}` for matching questions.
 
 ### `case_study_child`
-- Short question (1-3 sentences) referencing the case study.
-- `caseStudyId` must be set to the value in the Batch Specification.
+- Short question (1–3 sentences) that references facts from the case study.
+- `caseStudyId` MUST equal the value in "Case study scope" from the Batch Specification.
+- Questions within a case study can be any type (single_choice, multi_select, matching_magnet, etc.).
 
 ### `policy_control_selection`
 - Presents a governance/compliance requirement.
@@ -179,7 +186,83 @@ Every question must satisfy all five criteria:
 }
 ```
 
+### Example C — matching_magnet, Domain B, hard
+
+```json
+{
+  "id": "placeholder", "examCode": "GH-600", "domainId": "B",
+  "domainName": "Implement tool use and environment interaction",
+  "objectiveTags": ["mcp-permissions", "tool-scopes", "agent-configuration"],
+  "type": "matching_magnet", "difficulty": "hard",
+  "stem": "A platform team is configuring three GitHub Copilot features for a new agentic workflow. Match each feature to its primary purpose.",
+  "scenario": "The team is setting up GitHub Copilot coding agent with MCP server integration and persistent memory.",
+  "artifact": null, "caseStudyId": null,
+  "options": [
+    {"id": "row1", "text": "Copilot Memory"},
+    {"id": "row2", "text": "copilot-setup-steps.yml"},
+    {"id": "row3", "text": "MCP server allow list"}
+  ],
+  "matchChoices": [
+    "Stores persistent repo-level context across agent sessions",
+    "Defines the agent runtime environment and pre-installed tools",
+    "Controls which external tools the agent is permitted to invoke",
+    "Provides real-time web search capability during code generation",
+    "Manages branch protection rules and merge requirements"
+  ],
+  "correctAnswer": {"pairs": {
+    "row1": "Stores persistent repo-level context across agent sessions",
+    "row2": "Defines the agent runtime environment and pre-installed tools",
+    "row3": "Controls which external tools the agent is permitted to invoke"
+  }},
+  "explanation": {
+    "whyCorrect": "Copilot Memory stores facts about the repo persistently; copilot-setup-steps.yml configures the agent's runtime environment; the MCP allow list enforces least-privilege by allowlisting only needed tools.",
+    "whyDistractorsWrong": {},
+    "examStrategyNote": "On GH-600 matching questions, focus on the primary function — Copilot Memory is about persistence, not tool control."
+  },
+  "sourceRefs": [
+    {"title": "Copilot Memory", "url": "https://docs.github.com/en/copilot/concepts/agents/copilot-memory", "docType": "official_docs"},
+    {"title": "GitHub MCP Server", "repo": "github/github-mcp-server", "docType": "official_repo"}
+  ],
+  "metadata": {"generatedAt": "2026-01-01T00:00:00.000Z", "model": "gpt-5.5", "reasoningEffort": "medium", "batchId": "example", "validationStatus": "draft", "ambiguityScore": 0.05}
+}
+```
+
 ---
+
+## Case Study Batch Mode
+
+When "Case study scope" in the Batch Specification is **not** `null`, this is a **case study batch**.
+The response format changes: include a top-level `caseStudy` object AND a `questions` array.
+
+The `caseStudy` object schema:
+```json
+{
+  "id": "<same value as Case study scope>",
+  "title": "Case Study: <descriptive company/team name>",
+  "intro": "This is a case study. Case studies are not timed separately. You can use as much exam time as you would like to complete each case. However, there may be additional case studies and sections on this exam. You must manage your time to ensure that you are able to complete all questions included on this exam in the time provided. To answer the questions included in a case study, you will need to reference information that is provided in the case study. Each question is independent of the other questions in this case study.",
+  "sections": [
+    {"heading": "Overview", "body": "...company background, problem space..."},
+    {"heading": "Existing Environment", "body": "...current GitHub org setup, Copilot tier, agent configurations, repos..."},
+    {"heading": "Business Requirements", "body": "...what the org needs to achieve..."},
+    {"heading": "Technical Requirements", "body": "...specific constraints and technical goals..."},
+    {"heading": "Security and Compliance Requirements", "body": "...governance constraints, audit requirements..."}
+  ],
+  "artifacts": [],
+  "questionIds": []
+}
+```
+
+Each question in a case study batch MUST have `"caseStudyId"` set to the case study id.
+All questions should test different aspects of the same scenario (different requirements or trade-offs).
+Include at least one matching_magnet or sequence_order question if the batch count allows.
+
+Response format for case study batches:
+```json
+{
+  "caseStudy": { ... },
+  "questions": [ ... ]
+}
+```
 
 ## Output Schema
 
@@ -199,6 +282,8 @@ Every question must satisfy all five criteria:
       "artifact": null,
       "caseStudyId": null,
       "options": [{"id": "A", "text": "..."}],
+      "matchChoices": [],
+      // only for matching_magnet; empty array for all other types
       "correctAnswer": "B",
       "explanation": {
         "whyCorrect": "Why correct, citing principle or doc.",

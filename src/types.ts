@@ -78,19 +78,24 @@ export interface PracticeQuestion {
   artifact?: QuestionArtifact;
   caseStudyId?: string;
   options: AnswerOption[];
+  matchChoices?: string[];
   correctAnswer: string | string[] | OrderedAnswer | MatchingAnswer;
   explanation: Explanation;
   sourceRefs: SourceRef[];
   metadata: QuestionMetadata;
 }
 
+export interface CaseStudySection {
+  heading: string;
+  body: string;
+}
+
 export interface CaseStudy {
   id: string;
   title: string;
-  background: string;
-  organizationContext: string;
-  constraints: string[];
-  artifacts: QuestionArtifact[];
+  intro: string;
+  sections: CaseStudySection[];
+  artifacts?: QuestionArtifact[];
   questionIds: string[];
 }
 

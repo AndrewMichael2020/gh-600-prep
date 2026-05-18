@@ -105,7 +105,11 @@ function buildGenerationPrompt(
   return { system, user: filled };
 }
 
-async function generateWithOpenAI(plan: GenerationPlan, batch: BatchPlan, existingQuestionStems: string[]): Promise<PracticeQuestion[]> {
+async function generateWithOpenAI(
+  plan: GenerationPlan,
+  batch: BatchPlan,
+  existingQuestionStems: string[]
+): Promise<{ questions: PracticeQuestion[]; caseStudy?: CaseStudy }> {
   const client = new OpenAI({ apiKey: config.openaiApiKey });
   const { system, user } = buildGenerationPrompt(plan, batch, existingQuestionStems);
 
@@ -157,10 +161,10 @@ async function generateWithOpenAI(plan: GenerationPlan, batch: BatchPlan, existi
     text = text.slice(jsonStart, jsonEnd + 1);
   }
 
-  const parsed = JSON.parse(text) as { questions?: PracticeQuestion[] };
+  const parsed = JSON.parse(text) as { questions?: PracticeQuestion[]; caseStudy?: CaseStudy };
   if (!Array.isArray(parsed.questions)) throw new Error("OpenAI response missing questions array");
 
-  return parsed.questions.map((q) => ({
+  const mapped = parsed.questions.map((q) => ({
     ...q,
     id: uuidv4(),
     metadata: {
@@ -171,9 +175,15 @@ async function generateWithOpenAI(plan: GenerationPlan, batch: BatchPlan, existi
       generatedAt: new Date().toISOString(),
     },
   }));
+
+  return { questions: mapped, caseStudy: parsed.caseStudy };
 }
 
-export async function generateBatch(plan: GenerationPlan, batch: BatchPlan, existingQuestionStems: string[]) {
+export async function generateBatch(
+  plan: GenerationPlan,
+  batch: BatchPlan,
+  existingQuestionStems: string[]
+): Promise<{ questions: PracticeQuestion[]; caseStudy?: CaseStudy }> {
   if (!config.openaiApiKey) {
     throw new Error(
       "OpenAI API key not configured. Run `npm run generate` to pre-generate exams in dev mode."
@@ -245,7 +255,8 @@ export function validateBatch(questions: PracticeQuestion[]) {
     if (!sq.objectiveTags?.length) reasons.push("Missing objective tags");
     if (!sq.explanation?.whyCorrect) reasons.push("Missing explanation");
     if (sq.stem.toLowerCase().includes("real exam")) reasons.push("Claims to be a real exam question");
-    const hasAbsolute = /\balways\b|\bnever\b/i.test(`${sq.stem} ${sq.options.map((o) => o.text).join(" ")}`);
+    const optTexts = sq.options?.map((o) => o.text).join(" ") ?? "";
+    const hasAbsolute = /\balways\b|\bnever\b/i.test(`${sq.stem} ${optTexts}`);
     if (hasAbsolute) reasons.push("Contains absolute wording that may create giveaway bias");
 
     return {

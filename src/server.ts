@@ -70,8 +70,12 @@ app.post("/api/exams/blueprint", (req, res) => {
 app.post("/api/questions/generate-batch", async (req, res) => {
   const parsed = generateBatchRequestSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-  const questions = await generateBatch(parsed.data.plan, parsed.data.batch, parsed.data.existingQuestionStems);
-  return res.json({ questions });
+  const { questions, caseStudy } = await generateBatch(
+    parsed.data.plan,
+    parsed.data.batch,
+    parsed.data.existingQuestionStems
+  );
+  return res.json({ questions, caseStudy });
 });
 
 app.post("/api/questions/validate-batch", (req, res) => {
@@ -139,6 +143,7 @@ app.get("/api/exams/generate", async (req, res) => {
     send({ type: "plan", totalBatches: plan.batches.length, totalQuestions: plan.totalQuestions });
 
     const allQuestions: ReturnType<typeof validateBatch> = [];
+    const allCaseStudies: import("./types.js").CaseStudy[] = [];
 
     for (let i = 0; i < plan.batches.length; i++) {
       if (closed) break;
@@ -153,7 +158,12 @@ app.get("/api/exams/generate", async (req, res) => {
         questionCount: batch.questionCount,
       });
 
-      const generated = await generateBatch(plan, batch, allQuestions.map((q) => q.stem));
+      const { questions: generated, caseStudy } = await generateBatch(
+        plan,
+        batch,
+        allQuestions.map((q) => q.stem)
+      );
+      if (caseStudy) allCaseStudies.push(caseStudy);
       const validated = validateBatch(generated);
       const accepted = validated.filter((q) => q.metadata.validationStatus !== "rejected");
       allQuestions.push(...accepted);
@@ -161,7 +171,11 @@ app.get("/api/exams/generate", async (req, res) => {
       send({ type: "batch_done", index: i, accepted: accepted.length, running: allQuestions.length });
     }
 
-    const exam = assembleExam(plan, allQuestions as import("./types.js").PracticeQuestion[], []);
+    const exam = assembleExam(
+      plan,
+      allQuestions as import("./types.js").PracticeQuestion[],
+      allCaseStudies
+    );
     await saveExam(exam);
     send({ type: "complete", examId: exam.id, exam });
   } catch (err) {
