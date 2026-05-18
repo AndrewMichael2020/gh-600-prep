@@ -27,7 +27,7 @@ Last updated: 2026-05-18 (UTC)
 - [x] Weak-domain drill endpoint and UI trigger
 - [x] Mistake-replay endpoint and UI trigger
 - [x] Anti-bias dashboard (expanded, user-facing)
-- [ ] Matching/sequence interaction UX hardening
+- [x] Matching/sequence interaction UX hardening
 - [ ] Domain/sub-skill drill curation and prioritization tuning
 
 ### Phase 3 — Full mock ops
@@ -40,6 +40,16 @@ Last updated: 2026-05-18 (UTC)
 
 - `7966402` — Added confidence capture + richer frontend analytics.
 - `3ccdf11` — Added weak-domain drill + mistake replay study loops (API, UI wiring, tests).
+- `d6f95a6` — Added user-facing anti-bias dashboard.
+
+## OpenAI API token and cost tracker (Codex + GitHub)
+
+> Update this section per PR/iteration (best effort). Values may remain `TBD` when provider billing detail is unavailable in-runtime.
+
+| Date (UTC) | Surface | Prompt tokens | Completion tokens | Total tokens | Estimated cost (USD) | Notes |
+|---|---:|---:|---:|---:|---:|---|
+| 2026-05-18 | Codex (this repo iteration) | TBD | TBD | TBD | TBD | Runtime did not expose tokenized billing counters. |
+| 2026-05-18 | GitHub/Copilot-side usage | TBD | TBD | TBD | TBD | Track from GitHub billing/export if available. |
 
 ## Immediate next tasks
 

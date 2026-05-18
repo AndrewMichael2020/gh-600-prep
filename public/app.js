@@ -80,6 +80,45 @@ function shuffle(arr) {
   return [...arr].sort(() => Math.random() - 0.5);
 }
 
+function renderStructuredInteraction(q, selected) {
+  if (q.type === "sequence_order") {
+    const currentOrder = Array.isArray(selected?.order) && selected.order.length
+      ? selected.order
+      : q.options.map((o) => o.id);
+    return `
+      <div class="structured-block">
+        <p><strong>Sequence order</strong> (use arrows to set final order)</p>
+        <ul id="sequenceList">
+          ${currentOrder
+            .map((id, i) => `<li data-order-id="${id}">
+              <span>${id}. ${(q.options.find((o) => o.id === id)?.text) || id}</span>
+              <button type="button" data-seq-up="${i}">↑</button>
+              <button type="button" data-seq-down="${i}">↓</button>
+            </li>`)
+            .join("")}
+        </ul>
+      </div>
+    `;
+  }
+  if (q.type === "matching_magnet") {
+    const basePairs = selected?.pairs && typeof selected.pairs === "object" ? selected.pairs : {};
+    return `
+      <div class="structured-block">
+        <p><strong>Matching</strong> (map each left key to a right value)</p>
+        ${q.options
+          .map((opt) => {
+            const current = basePairs[opt.id] || "";
+            return `<label class="option">${opt.id}: ${opt.text}
+              <input type="text" data-match-key="${opt.id}" value="${current}" placeholder="Enter match value"/>
+            </label>`;
+          })
+          .join("")}
+      </div>
+    `;
+  }
+  return "";
+}
+
 function renderQuestion() {
   const q = state.exam.questions[state.currentIndex];
   state.questionStartedAt = Date.now();
@@ -97,6 +136,7 @@ function renderQuestion() {
       return `<label class="option"><input type="radio" name="opt" data-opt="${opt.id}" ${isChecked ? "checked" : ""}/> ${opt.id}. ${opt.text}</label>`;
     })
     .join("");
+  const structuredHtml = renderStructuredInteraction(q, selected);
 
   const artifact = q.artifact ? `<h4>${q.artifact.title}</h4><pre class="artifact">${q.artifact.content}</pre>` : "";
 
@@ -116,6 +156,7 @@ function renderQuestion() {
       <p>${q.scenario || ""}</p>
       ${artifact}
       <div>${optionsHtml}</div>
+      ${structuredHtml}
       <label class="option">
         Confidence:
         <select id="confidenceSelect">
@@ -144,6 +185,48 @@ function renderQuestion() {
     });
   });
 
+  if (q.type === "sequence_order") {
+    const getCurrent = () => (Array.isArray(state.answers[q.id]?.order) ? [...state.answers[q.id].order] : q.options.map((o) => o.id));
+    const setCurrent = (order) => {
+      state.answers[q.id] = { order };
+      renderQuestion();
+    };
+    el.question.querySelectorAll("button[data-seq-up]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.getAttribute("data-seq-up"));
+        const order = getCurrent();
+        if (idx <= 0 || idx >= order.length) return;
+        [order[idx - 1], order[idx]] = [order[idx], order[idx - 1]];
+        setCurrent(order);
+      });
+    });
+    el.question.querySelectorAll("button[data-seq-down]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.getAttribute("data-seq-down"));
+        const order = getCurrent();
+        if (idx < 0 || idx >= order.length - 1) return;
+        [order[idx + 1], order[idx]] = [order[idx], order[idx + 1]];
+        setCurrent(order);
+      });
+    });
+    if (!state.answers[q.id]) {
+      state.answers[q.id] = { order: q.options.map((o) => o.id) };
+    }
+  }
+
+  if (q.type === "matching_magnet") {
+    if (!state.answers[q.id] || typeof state.answers[q.id] !== "object") state.answers[q.id] = { pairs: {} };
+    el.question.querySelectorAll("input[data-match-key]").forEach((node) => {
+      node.addEventListener("change", () => {
+        const key = node.getAttribute("data-match-key");
+        if (!key) return;
+        const currentPairs = { ...(state.answers[q.id]?.pairs || {}) };
+        if (!node.value.trim()) delete currentPairs[key];
+        else currentPairs[key] = node.value.trim();
+        state.answers[q.id] = { pairs: currentPairs };
+      });
+    });
+  }
   const confidenceSelect = document.getElementById("confidenceSelect");
   confidenceSelect?.addEventListener("change", () => {
     const value = confidenceSelect.value;
