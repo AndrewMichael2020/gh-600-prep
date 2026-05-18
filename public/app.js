@@ -27,10 +27,49 @@ const el = {
   reviewContent: document.getElementById("reviewContent"),
   analytics: document.getElementById("analytics"),
   analyticsContent: document.getElementById("analyticsContent"),
+  antiBiasContent: document.getElementById("antiBiasContent"),
   weakDrillBtn: document.getElementById("weakDrillBtn"),
   mistakeReplayBtn: document.getElementById("mistakeReplayBtn"),
   studyLoopContent: document.getElementById("studyLoopContent"),
 };
+
+function rankForOptionLength(q, optionId) {
+  const lengths = q.options.map((o) => o.text.length).sort((a, b) => a - b);
+  const selected = q.options.find((o) => o.id === optionId);
+  const len = selected?.text.length ?? lengths[Math.floor(lengths.length / 2)];
+  if (len <= lengths[0]) return "shortest";
+  if (len >= lengths[lengths.length - 1]) return "longest";
+  return "middle";
+}
+
+function computeAntiBiasDashboard(questions, examAntiBias) {
+  const totals = { shortest: 0, middle: 0, longest: 0 };
+  let mcqCount = 0;
+  for (const q of questions) {
+    if (typeof q.correctAnswer !== "string") continue;
+    mcqCount += 1;
+    totals[rankForOptionLength(q, q.correctAnswer)] += 1;
+  }
+
+  const position = examAntiBias?.answerPositionDistribution || {};
+  const posValues = ["A", "B", "C", "D"].map((k) => position[k] || 0);
+  const totalPos = posValues.reduce((a, b) => a + b, 0);
+  const targetPer = totalPos / 4;
+  const maxGap = totalPos === 0 ? 0 : Math.max(...posValues.map((v) => Math.abs(v - targetPer))) / totalPos;
+
+  return {
+    positionDistribution: position,
+    positionBalanceStatus: maxGap <= 0.1 ? "pass" : "review",
+    longestOptionCorrectRatio: Number((examAntiBias?.longestOptionCorrectRatio || 0).toFixed(3)),
+    longestOptionStatus: (examAntiBias?.longestOptionCorrectRatio || 0) <= 0.3 ? "pass" : "review",
+    correctOptionLengthRankDistribution: totals,
+    mcqCount,
+    target: {
+      position: "A/B/C/D roughly balanced (±10%)",
+      longestRatio: "Longest option correct ratio <= 0.30",
+    },
+  };
+}
 
 function log(msg) {
   el.progressLog.textContent += `${msg}\n`;
@@ -253,6 +292,11 @@ async function submitExam() {
     distractorAttraction,
     flagged: [...state.flagged],
   }, null, 2);
+  el.antiBiasContent.textContent = JSON.stringify(
+    computeAntiBiasDashboard(state.exam.questions, state.exam.antiBias),
+    null,
+    2,
+  );
 
   el.weakDrillBtn.onclick = async () => {
     const payload = await fetch(`/api/study/weak-domain-drill/${attempt.id}?limit=10`).then((r) => r.json());

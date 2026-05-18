@@ -26,7 +26,7 @@ Last updated: 2026-05-18 (UTC)
 - [x] Analytics view includes distractor-attraction signals
 - [x] Weak-domain drill endpoint and UI trigger
 - [x] Mistake-replay endpoint and UI trigger
-- [ ] Anti-bias dashboard (expanded, user-facing)
+- [x] Anti-bias dashboard (expanded, user-facing)
 - [ ] Matching/sequence interaction UX hardening
 - [ ] Domain/sub-skill drill curation and prioritization tuning
 
