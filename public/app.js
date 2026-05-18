@@ -227,7 +227,6 @@ function renderQuestion() {
       });
     });
   }
-
   const confidenceSelect = document.getElementById("confidenceSelect");
   confidenceSelect?.addEventListener("change", () => {
     const value = confidenceSelect.value;
