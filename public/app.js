@@ -31,6 +31,7 @@ const el = {
   weakDrillBtn: document.getElementById("weakDrillBtn"),
   mistakeReplayBtn: document.getElementById("mistakeReplayBtn"),
   subskillDrillBtn: document.getElementById("subskillDrillBtn"),
+  exportAttemptBtn: document.getElementById("exportAttemptBtn"),
   studyLoopContent: document.getElementById("studyLoopContent"),
 };
 
@@ -397,6 +398,22 @@ async function submitExam() {
     const payload = await fetch(`/api/study/domain-subskill-drill/${attempt.id}?limit=12`).then((r) => r.json());
     const lines = (payload.questions || []).map((q) => `${q.id} [${q.objectiveTags.join(", ")}]`);
     el.studyLoopContent.textContent = `Domain/sub-skill drill (${lines.length}):\n${lines.join("\n")}`;
+  };
+  el.exportAttemptBtn.onclick = async () => {
+    const resp = await fetch(`/api/exports/attempt/${attempt.id}`);
+    if (!resp.ok) {
+      el.studyLoopContent.textContent = `Export failed: HTTP ${resp.status}`;
+      return;
+    }
+    const text = await resp.text();
+    const blob = new Blob([text], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `attempt-${attempt.id}-report.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    el.studyLoopContent.textContent = `Exported attempt report: attempt-${attempt.id}-report.json`;
   };
 }
 

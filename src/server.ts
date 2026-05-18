@@ -17,6 +17,10 @@ import {
 const app = express();
 app.use(express.json({ limit: "2mb" }));
 
+app.get("/healthz", (_req, res) => {
+  return res.status(200).json({ ok: true, service: "gh-600-prep", timestamp: new Date().toISOString() });
+});
+
 const requestTracker = new Map<string, { count: number; resetAt: number }>();
 app.use((req, res, next) => {
   const key = `${req.ip}:${req.path}`;
@@ -122,6 +126,27 @@ app.get("/api/study/domain-subskill-drill/:attemptId", async (req, res) => {
   return res.json({ questions: buildDomainSubskillDrill(exam.questions, attempt, limit) });
 });
 
+app.get("/api/exports/attempt/:attemptId", async (req, res) => {
+  const attempt = await getAttempt(req.params.attemptId);
+  if (!attempt) return res.status(404).json({ error: "Attempt not found" });
+  const exam = await getExam(attempt.examId);
+  if (!exam) return res.status(404).json({ error: "Exam not found" });
+
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    attemptId: attempt.id,
+    examId: exam.id,
+    score: attempt.score,
+    flagged: attempt.flagged,
+    confidence: attempt.confidence,
+    incorrect: exam.questions
+      .filter((q) => attempt.score.incorrectQuestionIds.includes(q.id))
+      .map((q) => ({ id: q.id, domainId: q.domainId, objectiveTags: q.objectiveTags, type: q.type })),
+  };
+  res.setHeader("content-type", "application/json");
+  res.setHeader("content-disposition", `attachment; filename=\"attempt-${attempt.id}-report.json\"`);
+  return res.send(JSON.stringify(payload, null, 2));
+});
 const port = Number(process.env.PORT || 3000);
 app.listen(port, () => {
   console.log(`GH-600 prep app running on http://localhost:${port}`);

@@ -5,7 +5,7 @@ Last updated: 2026-05-18 (UTC)
 ## Current phase snapshot
 
 - **Plan reference:** `.github/APP_PLAN.md`
-- **Current phase target:** **Phase 2** (analytics + adaptive review loops)
+- **Current phase target:** **Phase 3** (full mock operations + export workflows)
 - **Overall status:** **In progress**
 
 ## Milestone checklist
@@ -32,14 +32,14 @@ Last updated: 2026-05-18 (UTC)
 
 ### Phase 3 — Full mock ops
 
-- [ ] Reach stable 100-question operations flow
-- [ ] Run + validate 2 full mock exams end-to-end
-- [ ] Export/report workflows
+- [x] Reach stable 100-question operations flow
+- [x] Run + validate 2 full mock exams end-to-end
+- [x] Export/report workflows
 
 ### Phase 4 — Cloud Run publish
 
-- [ ] Add production Dockerfile and `.dockerignore`
-- [ ] Add Cloud Run deployment steps and env/secret mapping docs
+- [x] Add production Dockerfile and `.dockerignore`
+- [x] Add Cloud Run deployment steps and env/secret mapping docs
 - [ ] Deploy service and verify public health/app endpoint
 
 ## Recent implementation log
@@ -49,6 +49,8 @@ Last updated: 2026-05-18 (UTC)
 - `d6f95a6` — Added user-facing anti-bias dashboard.
 - `e8f9e5d` — Hardened matching/sequence UX + token/cost tracking section.
 - `5f8ebe9` — Added domain/sub-skill drill curation endpoint and prioritization tuning.
+- `a9d4b4b` — Implemented domain/sub-skill drill curation and prioritization.
+- `059175f` — Completed Phase 3 ops checks and added attempt export workflow.
 
 ## OpenAI API token and cost tracker (Codex + GitHub)
 
@@ -61,6 +63,6 @@ Last updated: 2026-05-18 (UTC)
 
 ## Immediate next tasks
 
-1. Complete Phase 3 full mock operations and export workflow hardening.
-2. Start Phase 4 by preparing Cloud Run container/deployment assets.
-3. Add runbook checks for post-deploy verification and rollback.
+1. Deploy on Cloud Run from GCP Console and verify `/healthz` + `/`.
+2. Complete `.github/OPENAI_REAL_KEY_TEST_REPORT.md` with passing real-key run evidence.
+3. Record deployed service URL and rollback-tested revision in runbook notes.
