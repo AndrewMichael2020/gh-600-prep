@@ -27,6 +27,9 @@ const el = {
   reviewContent: document.getElementById("reviewContent"),
   analytics: document.getElementById("analytics"),
   analyticsContent: document.getElementById("analyticsContent"),
+  weakDrillBtn: document.getElementById("weakDrillBtn"),
+  mistakeReplayBtn: document.getElementById("mistakeReplayBtn"),
+  studyLoopContent: document.getElementById("studyLoopContent"),
 };
 
 function log(msg) {
@@ -250,6 +253,17 @@ async function submitExam() {
     distractorAttraction,
     flagged: [...state.flagged],
   }, null, 2);
+
+  el.weakDrillBtn.onclick = async () => {
+    const payload = await fetch(`/api/study/weak-domain-drill/${attempt.id}?limit=10`).then((r) => r.json());
+    const ids = (payload.questions || []).map((q) => q.id);
+    el.studyLoopContent.textContent = `Weak-domain drill (${ids.length}):\n${ids.join("\n")}`;
+  };
+  el.mistakeReplayBtn.onclick = async () => {
+    const payload = await fetch(`/api/study/mistake-replay/${attempt.id}?limit=20`).then((r) => r.json());
+    const ids = (payload.questions || []).map((q) => q.id);
+    el.studyLoopContent.textContent = `Mistake replay (${ids.length}):\n${ids.join("\n")}`;
+  };
 }
 
 el.generateBtn.addEventListener("click", generate);
