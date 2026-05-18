@@ -182,20 +182,76 @@ export async function generateBatch(plan: GenerationPlan, batch: BatchPlan, exis
   return generateWithOpenAI(plan, batch, existingQuestionStems);
 }
 
+/**
+ * Randomly reassigns the A/B/C/D key labels across options so the correct
+ * answer is uniformly distributed and not predictable by position.
+ * All fields that reference option ids (correctAnswer, whyDistractorsWrong)
+ * are updated to match the new labels.
+ * sequence_order and matching_magnet are left untouched — their correctAnswer
+ * is not a simple letter and shuffling them requires different logic.
+ */
+function shuffleOptionKeys(q: PracticeQuestion): PracticeQuestion {
+  if (q.type === "sequence_order" || q.type === "matching_magnet") return q;
+  if (!q.options?.length) return q;
+
+  // Fisher-Yates shuffle of the option objects themselves
+  const shuffled = [...q.options];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  // Build old-id → new-id mapping (new ids are A, B, C, … in order)
+  const labels = "ABCDEFGHIJ".split("");
+  const oldToNew = new Map<string, string>();
+  const newOptions = shuffled.map((opt, i) => {
+    const newId = labels[i];
+    oldToNew.set(opt.id, newId);
+    return { id: newId, text: opt.text };
+  });
+
+  // Remap correctAnswer
+  let newCorrect: PracticeQuestion["correctAnswer"];
+  if (typeof q.correctAnswer === "string") {
+    newCorrect = oldToNew.get(q.correctAnswer) ?? q.correctAnswer;
+  } else if (Array.isArray(q.correctAnswer)) {
+    newCorrect = q.correctAnswer.map((id) => oldToNew.get(id) ?? id);
+  } else {
+    return q; // unexpected shape — leave untouched
+  }
+
+  // Remap whyDistractorsWrong keys
+  const oldWhy = q.explanation?.whyDistractorsWrong ?? {};
+  const newWhy: Record<string, string> = {};
+  for (const [oldId, reason] of Object.entries(oldWhy)) {
+    newWhy[oldToNew.get(oldId) ?? oldId] = reason;
+  }
+
+  return {
+    ...q,
+    options: newOptions,
+    correctAnswer: newCorrect,
+    explanation: { ...q.explanation, whyDistractorsWrong: newWhy },
+  };
+}
+
 export function validateBatch(questions: PracticeQuestion[]) {
   return questions.map((q) => {
+    // Shuffle option keys first so correct-answer distribution is uniform
+    const sq = shuffleOptionKeys(q);
+
     const reasons: string[] = [];
-    if (!q.sourceRefs?.length) reasons.push("Missing source refs");
-    if (!q.objectiveTags?.length) reasons.push("Missing objective tags");
-    if (!q.explanation?.whyCorrect) reasons.push("Missing explanation");
-    if (q.stem.toLowerCase().includes("real exam")) reasons.push("Claims to be a real exam question");
-    const hasAbsolute = /\balways\b|\bnever\b/i.test(`${q.stem} ${q.options.map((o) => o.text).join(" ")}`);
+    if (!sq.sourceRefs?.length) reasons.push("Missing source refs");
+    if (!sq.objectiveTags?.length) reasons.push("Missing objective tags");
+    if (!sq.explanation?.whyCorrect) reasons.push("Missing explanation");
+    if (sq.stem.toLowerCase().includes("real exam")) reasons.push("Claims to be a real exam question");
+    const hasAbsolute = /\balways\b|\bnever\b/i.test(`${sq.stem} ${sq.options.map((o) => o.text).join(" ")}`);
     if (hasAbsolute) reasons.push("Contains absolute wording that may create giveaway bias");
 
     return {
-      ...q,
+      ...sq,
       metadata: {
-        ...q.metadata,
+        ...sq.metadata,
         validationStatus: reasons.length ? "needs_review" : "validated",
       },
       validationIssues: reasons,

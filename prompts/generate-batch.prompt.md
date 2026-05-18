@@ -93,7 +93,7 @@ Every question must satisfy all five criteria:
 
 ## Anti-Bias Rules (enforced automatically)
 
-- **Answer position**: Spread correct answers across A/B/C/D. Target distribution: {{CORRECT_ANSWER_TARGETS}}
+- **Answer position**: CRITICAL — place the correct answer at position {{CORRECT_ANSWER_TARGETS}} for this batch. Do NOT default to A or C. Deliberately vary which letter is correct across the questions in this batch.
 - **Length parity**: Keep all options within 20 words of each other. Longest option must not be correct more than 30% of the time.
 - **No absolutes**: Avoid "always"/"never" -- these are giveaway tells.
 - **No obvious wrong**: Every distractor must be a real choice a practitioner could make.
