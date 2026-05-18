@@ -38,8 +38,8 @@ Last updated: 2026-05-18 (UTC)
 
 ### Phase 4 — Cloud Run publish
 
-- [ ] Add production Dockerfile and `.dockerignore`
-- [ ] Add Cloud Run deployment steps and env/secret mapping docs
+- [x] Add production Dockerfile and `.dockerignore`
+- [x] Add Cloud Run deployment steps and env/secret mapping docs
 - [ ] Deploy service and verify public health/app endpoint
 
 ## Recent implementation log
@@ -63,6 +63,6 @@ Last updated: 2026-05-18 (UTC)
 
 ## Immediate next tasks
 
-1. Start Phase 4 by preparing Cloud Run container/deployment assets.
-2. Add Cloud Run deployment runbook checks (health, rollback, secrets).
-3. Complete `.github/OPENAI_REAL_KEY_TEST_REPORT.md` with passing real-key run evidence before publish.
+1. Deploy on Cloud Run from GCP Console and verify `/healthz` + `/`.
+2. Complete `.github/OPENAI_REAL_KEY_TEST_REPORT.md` with passing real-key run evidence.
+3. Record deployed service URL and rollback-tested revision in runbook notes.
