@@ -6,6 +6,9 @@ const state = {
   mode: "exam",
   timer: null,
   secondsLeft: 0,
+  confidence: {},
+  questionStartedAt: 0,
+  responseTimeMs: {},
 };
 
 const el = {
@@ -24,7 +27,50 @@ const el = {
   reviewContent: document.getElementById("reviewContent"),
   analytics: document.getElementById("analytics"),
   analyticsContent: document.getElementById("analyticsContent"),
+  antiBiasContent: document.getElementById("antiBiasContent"),
+  weakDrillBtn: document.getElementById("weakDrillBtn"),
+  mistakeReplayBtn: document.getElementById("mistakeReplayBtn"),
+  subskillDrillBtn: document.getElementById("subskillDrillBtn"),
+  studyLoopContent: document.getElementById("studyLoopContent"),
 };
+
+function rankForOptionLength(q, optionId) {
+  const lengths = q.options.map((o) => o.text.length).sort((a, b) => a - b);
+  const selected = q.options.find((o) => o.id === optionId);
+  const len = selected?.text.length ?? lengths[Math.floor(lengths.length / 2)];
+  if (len <= lengths[0]) return "shortest";
+  if (len >= lengths[lengths.length - 1]) return "longest";
+  return "middle";
+}
+
+function computeAntiBiasDashboard(questions, examAntiBias) {
+  const totals = { shortest: 0, middle: 0, longest: 0 };
+  let mcqCount = 0;
+  for (const q of questions) {
+    if (typeof q.correctAnswer !== "string") continue;
+    mcqCount += 1;
+    totals[rankForOptionLength(q, q.correctAnswer)] += 1;
+  }
+
+  const position = examAntiBias?.answerPositionDistribution || {};
+  const posValues = ["A", "B", "C", "D"].map((k) => position[k] || 0);
+  const totalPos = posValues.reduce((a, b) => a + b, 0);
+  const targetPer = totalPos / 4;
+  const maxGap = totalPos === 0 ? 0 : Math.max(...posValues.map((v) => Math.abs(v - targetPer))) / totalPos;
+
+  return {
+    positionDistribution: position,
+    positionBalanceStatus: maxGap <= 0.1 ? "pass" : "review",
+    longestOptionCorrectRatio: Number((examAntiBias?.longestOptionCorrectRatio || 0).toFixed(3)),
+    longestOptionStatus: (examAntiBias?.longestOptionCorrectRatio || 0) <= 0.3 ? "pass" : "review",
+    correctOptionLengthRankDistribution: totals,
+    mcqCount,
+    target: {
+      position: "A/B/C/D roughly balanced (±10%)",
+      longestRatio: "Longest option correct ratio <= 0.30",
+    },
+  };
+}
 
 function log(msg) {
   el.progressLog.textContent += `${msg}\n`;
@@ -35,9 +81,50 @@ function shuffle(arr) {
   return [...arr].sort(() => Math.random() - 0.5);
 }
 
+function renderStructuredInteraction(q, selected) {
+  if (q.type === "sequence_order") {
+    const currentOrder = Array.isArray(selected?.order) && selected.order.length
+      ? selected.order
+      : q.options.map((o) => o.id);
+    return `
+      <div class="structured-block">
+        <p><strong>Sequence order</strong> (use arrows to set final order)</p>
+        <ul id="sequenceList">
+          ${currentOrder
+            .map((id, i) => `<li data-order-id="${id}">
+              <span>${id}. ${(q.options.find((o) => o.id === id)?.text) || id}</span>
+              <button type="button" data-seq-up="${i}">↑</button>
+              <button type="button" data-seq-down="${i}">↓</button>
+            </li>`)
+            .join("")}
+        </ul>
+      </div>
+    `;
+  }
+  if (q.type === "matching_magnet") {
+    const basePairs = selected?.pairs && typeof selected.pairs === "object" ? selected.pairs : {};
+    return `
+      <div class="structured-block">
+        <p><strong>Matching</strong> (map each left key to a right value)</p>
+        ${q.options
+          .map((opt) => {
+            const current = basePairs[opt.id] || "";
+            return `<label class="option">${opt.id}: ${opt.text}
+              <input type="text" data-match-key="${opt.id}" value="${current}" placeholder="Enter match value"/>
+            </label>`;
+          })
+          .join("")}
+      </div>
+    `;
+  }
+  return "";
+}
+
 function renderQuestion() {
   const q = state.exam.questions[state.currentIndex];
+  state.questionStartedAt = Date.now();
   const selected = state.answers[q.id] || (q.type === "multi_select" ? [] : "");
+  const confidence = state.confidence[q.id] || "";
   const mode = state.mode;
 
   const optionsHtml = q.options
@@ -50,6 +137,7 @@ function renderQuestion() {
       return `<label class="option"><input type="radio" name="opt" data-opt="${opt.id}" ${isChecked ? "checked" : ""}/> ${opt.id}. ${opt.text}</label>`;
     })
     .join("");
+  const structuredHtml = renderStructuredInteraction(q, selected);
 
   const artifact = q.artifact ? `<h4>${q.artifact.title}</h4><pre class="artifact">${q.artifact.content}</pre>` : "";
 
@@ -69,6 +157,16 @@ function renderQuestion() {
       <p>${q.scenario || ""}</p>
       ${artifact}
       <div>${optionsHtml}</div>
+      ${structuredHtml}
+      <label class="option">
+        Confidence:
+        <select id="confidenceSelect">
+          <option value="" ${confidence === "" ? "selected" : ""}>Not set</option>
+          <option value="guessed" ${confidence === "guessed" ? "selected" : ""}>Guessed</option>
+          <option value="somewhat_confident" ${confidence === "somewhat_confident" ? "selected" : ""}>Somewhat confident</option>
+          <option value="confident" ${confidence === "confident" ? "selected" : ""}>Confident</option>
+        </select>
+      </label>
       ${explanation}
     </div>
   `;
@@ -87,6 +185,66 @@ function renderQuestion() {
       }
     });
   });
+
+  if (q.type === "sequence_order") {
+    const getCurrent = () => (Array.isArray(state.answers[q.id]?.order) ? [...state.answers[q.id].order] : q.options.map((o) => o.id));
+    const setCurrent = (order) => {
+      state.answers[q.id] = { order };
+      renderQuestion();
+    };
+    el.question.querySelectorAll("button[data-seq-up]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.getAttribute("data-seq-up"));
+        const order = getCurrent();
+        if (idx <= 0 || idx >= order.length) return;
+        [order[idx - 1], order[idx]] = [order[idx], order[idx - 1]];
+        setCurrent(order);
+      });
+    });
+    el.question.querySelectorAll("button[data-seq-down]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.getAttribute("data-seq-down"));
+        const order = getCurrent();
+        if (idx < 0 || idx >= order.length - 1) return;
+        [order[idx + 1], order[idx]] = [order[idx], order[idx + 1]];
+        setCurrent(order);
+      });
+    });
+    if (!state.answers[q.id]) {
+      state.answers[q.id] = { order: q.options.map((o) => o.id) };
+    }
+  }
+
+  if (q.type === "matching_magnet") {
+    if (!state.answers[q.id] || typeof state.answers[q.id] !== "object") state.answers[q.id] = { pairs: {} };
+    el.question.querySelectorAll("input[data-match-key]").forEach((node) => {
+      node.addEventListener("change", () => {
+        const key = node.getAttribute("data-match-key");
+        if (!key) return;
+        const currentPairs = { ...(state.answers[q.id]?.pairs || {}) };
+        if (!node.value.trim()) delete currentPairs[key];
+        else currentPairs[key] = node.value.trim();
+        state.answers[q.id] = { pairs: currentPairs };
+      });
+    });
+  }
+
+  const confidenceSelect = document.getElementById("confidenceSelect");
+  confidenceSelect?.addEventListener("change", () => {
+    const value = confidenceSelect.value;
+    if (!value) {
+      delete state.confidence[q.id];
+      return;
+    }
+    state.confidence[q.id] = value;
+  });
+}
+
+function recordQuestionTime() {
+  if (!state.exam || !state.questionStartedAt) return;
+  const q = state.exam.questions[state.currentIndex];
+  const elapsed = Math.max(0, Date.now() - state.questionStartedAt);
+  state.responseTimeMs[q.id] = (state.responseTimeMs[q.id] || 0) + elapsed;
 }
 
 function startTimer(questionCount) {
@@ -151,6 +309,8 @@ async function generate() {
   state.exam = exam;
   state.currentIndex = 0;
   state.answers = {};
+  state.confidence = {};
+  state.responseTimeMs = {};
   state.flagged.clear();
   document.getElementById("exam").classList.remove("hidden");
   renderQuestion();
@@ -159,11 +319,12 @@ async function generate() {
 
 async function submitExam() {
   if (!state.exam) return;
+  recordQuestionTime();
   clearInterval(state.timer);
   const attempt = await fetch("/api/attempts", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ examId: state.exam.id, answers: state.answers, flagged: [...state.flagged], confidence: {} }),
+    body: JSON.stringify({ examId: state.exam.id, answers: state.answers, flagged: [...state.flagged], confidence: state.confidence }),
   }).then((r) => r.json());
 
   document.getElementById("review").classList.remove("hidden");
@@ -187,22 +348,68 @@ async function submitExam() {
     .join("");
   el.reviewContent.innerHTML = reviewHtml;
 
+  const byTypeTimes = {};
+  const distractorAttraction = {};
+  for (const q of state.exam.questions) {
+    const ms = state.responseTimeMs[q.id] || 0;
+    byTypeTimes[q.type] ??= { totalMs: 0, count: 0 };
+    byTypeTimes[q.type].totalMs += ms;
+    byTypeTimes[q.type].count += 1;
+    const user = state.answers[q.id];
+    if (typeof q.correctAnswer === "string" && typeof user === "string" && user !== q.correctAnswer) {
+      const key = `${q.id}:${user}`;
+      distractorAttraction[key] = (distractorAttraction[key] || 0) + 1;
+    }
+  }
+  const avgResponseTimeByTypeSeconds = Object.fromEntries(
+    Object.entries(byTypeTimes).map(([type, v]) => [type, Number((v.totalMs / Math.max(1, v.count) / 1000).toFixed(1))]),
+  );
+
   el.analyticsContent.textContent = JSON.stringify({
     overallScore: attempt.score.overall,
     domainBreakdown: attempt.score.byDomain,
     incorrectQuestionIds: attempt.score.incorrectQuestionIds,
+    confidenceDistribution: Object.values(state.confidence).reduce((acc, label) => {
+      acc[label] = (acc[label] || 0) + 1;
+      return acc;
+    }, {}),
+    avgResponseTimeByTypeSeconds,
+    distractorAttraction,
     flagged: [...state.flagged],
   }, null, 2);
+  el.antiBiasContent.textContent = JSON.stringify(
+    computeAntiBiasDashboard(state.exam.questions, state.exam.antiBias),
+    null,
+    2,
+  );
+
+  el.weakDrillBtn.onclick = async () => {
+    const payload = await fetch(`/api/study/weak-domain-drill/${attempt.id}?limit=10`).then((r) => r.json());
+    const ids = (payload.questions || []).map((q) => q.id);
+    el.studyLoopContent.textContent = `Weak-domain drill (${ids.length}):\n${ids.join("\n")}`;
+  };
+  el.mistakeReplayBtn.onclick = async () => {
+    const payload = await fetch(`/api/study/mistake-replay/${attempt.id}?limit=20`).then((r) => r.json());
+    const ids = (payload.questions || []).map((q) => q.id);
+    el.studyLoopContent.textContent = `Mistake replay (${ids.length}):\n${ids.join("\n")}`;
+  };
+  el.subskillDrillBtn.onclick = async () => {
+    const payload = await fetch(`/api/study/domain-subskill-drill/${attempt.id}?limit=12`).then((r) => r.json());
+    const lines = (payload.questions || []).map((q) => `${q.id} [${q.objectiveTags.join(", ")}]`);
+    el.studyLoopContent.textContent = `Domain/sub-skill drill (${lines.length}):\n${lines.join("\n")}`;
+  };
 }
 
 el.generateBtn.addEventListener("click", generate);
 el.prevBtn.addEventListener("click", () => {
   if (!state.exam) return;
+  recordQuestionTime();
   state.currentIndex = Math.max(0, state.currentIndex - 1);
   renderQuestion();
 });
 el.nextBtn.addEventListener("click", () => {
   if (!state.exam) return;
+  recordQuestionTime();
   state.currentIndex = Math.min(state.exam.questions.length - 1, state.currentIndex + 1);
   renderQuestion();
 });

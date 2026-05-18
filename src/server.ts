@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { assembleExam, createPlan, generateBatch, validateBatch } from "./generation.js";
 import { getAttempt, getExam, saveAttempt, saveExam } from "./persistence.js";
 import { scoreAttempt } from "./scoring.js";
+import { buildDomainSubskillDrill, buildMistakeReplay, buildWeakDomainDrill } from "./studyLoops.js";
 import { Attempt } from "./types.js";
 import {
   assembleRequestSchema,
@@ -92,6 +93,33 @@ app.get("/api/exams/:id", async (req, res) => {
   const exam = await getExam(req.params.id);
   if (!exam) return res.status(404).json({ error: "Exam not found" });
   return res.json(exam);
+});
+
+app.get("/api/study/weak-domain-drill/:attemptId", async (req, res) => {
+  const attempt = await getAttempt(req.params.attemptId);
+  if (!attempt) return res.status(404).json({ error: "Attempt not found" });
+  const exam = await getExam(attempt.examId);
+  if (!exam) return res.status(404).json({ error: "Exam not found" });
+  const limit = Number(req.query.limit || 10);
+  return res.json({ questions: buildWeakDomainDrill(exam.questions, attempt, limit) });
+});
+
+app.get("/api/study/mistake-replay/:attemptId", async (req, res) => {
+  const attempt = await getAttempt(req.params.attemptId);
+  if (!attempt) return res.status(404).json({ error: "Attempt not found" });
+  const exam = await getExam(attempt.examId);
+  if (!exam) return res.status(404).json({ error: "Exam not found" });
+  const limit = Number(req.query.limit || 20);
+  return res.json({ questions: buildMistakeReplay(exam.questions, attempt, limit) });
+});
+
+app.get("/api/study/domain-subskill-drill/:attemptId", async (req, res) => {
+  const attempt = await getAttempt(req.params.attemptId);
+  if (!attempt) return res.status(404).json({ error: "Attempt not found" });
+  const exam = await getExam(attempt.examId);
+  if (!exam) return res.status(404).json({ error: "Exam not found" });
+  const limit = Number(req.query.limit || 12);
+  return res.json({ questions: buildDomainSubskillDrill(exam.questions, attempt, limit) });
 });
 
 const port = Number(process.env.PORT || 3000);
