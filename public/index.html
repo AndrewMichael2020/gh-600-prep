@@ -3,56 +3,189 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GH-600 Practice App</title>
+    <title>GH-600 Practice</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <main>
-      <h1>GH-600 Practice App (Phase 1)</h1>
 
-      <section id="setup">
-        <h2>Home / Setup</h2>
-        <label>Question count <input id="questionCount" type="number" min="1" value="30" /></label>
-        <label>Mode
-          <select id="mode"><option value="exam">Exam mode</option><option value="review">Review mode</option></select>
-        </label>
-        <button id="generateBtn">Generate</button>
-      </section>
-
-      <section id="progress">
-        <h2>Generation progress</h2>
-        <pre id="progressLog"></pre>
-      </section>
-
-      <section id="exam" class="hidden">
-        <h2>Exam</h2>
-        <div id="timer"></div>
-        <div id="question"></div>
-        <button id="prevBtn">Prev</button>
-        <button id="nextBtn">Next</button>
-        <button id="flagBtn">Flag</button>
-        <button id="submitBtn">Submit</button>
-      </section>
-
-      <section id="review" class="hidden">
-        <h2>Review</h2>
-        <div id="reviewContent"></div>
-      </section>
-
-      <section id="analytics" class="hidden">
-        <h2>Analytics</h2>
-        <pre id="analyticsContent"></pre>
-        <h3>Anti-bias dashboard</h3>
-        <pre id="antiBiasContent"></pre>
-        <div>
-          <button id="weakDrillBtn">Build weak-domain drill</button>
-          <button id="mistakeReplayBtn">Build mistake replay</button>
-          <button id="subskillDrillBtn">Build domain/sub-skill drill</button>
-          <button id="exportAttemptBtn">Export attempt report</button>
+    <!-- ── SETUP VIEW ─────────────────────────────────────────────── -->
+    <div id="view-setup" class="view active">
+      <div class="setup-card">
+        <div class="setup-header">
+          <div class="gh-logo">⚡</div>
+          <h1>GH-600 Practice</h1>
+          <p class="subtitle">Developing in Agentic AI Systems</p>
         </div>
-        <pre id="studyLoopContent"></pre>
-      </section>
-    </main>
+
+        <!-- Exam list — shown when pre-generated exams exist -->
+        <section id="examListSection" class="hidden">
+          <h2 class="section-title">Available Exams</h2>
+          <ul id="examList" class="exam-list"></ul>
+        </section>
+
+        <!-- No exams + no API key -->
+        <p id="noExamsMsg" class="no-exams-msg hidden">
+          No practice exams have been generated yet. A developer must run
+          <code>npm run generate</code> to create exams.
+        </p>
+
+        <!-- Generation form — shown only when server has an API key -->
+        <section id="generateSection" class="hidden">
+          <h2 class="section-title">Generate New Exam</h2>
+
+          <div class="form-section">
+            <label class="form-label">Number of questions</label>
+            <div class="pill-group" id="countPills">
+              <button class="pill" data-count="10">10</button>
+              <button class="pill active" data-count="30">30</button>
+              <button class="pill" data-count="70">70</button>
+              <button class="pill" data-count="100">100</button>
+            </div>
+            <input id="customCount" type="number" min="1" max="200" placeholder="Custom…" class="custom-input" />
+          </div>
+
+          <div class="form-section">
+            <label class="form-label">Mode</label>
+            <div class="pill-group" id="modePills">
+              <button class="pill active" data-mode="exam">🎯 Exam</button>
+              <button class="pill" data-mode="review">📖 Practice</button>
+            </div>
+          </div>
+
+          <div class="domain-grid">
+            <div class="domain-chip">A · Agent architecture</div>
+            <div class="domain-chip">B · MCP &amp; permissions</div>
+            <div class="domain-chip">C · Memory &amp; state</div>
+            <div class="domain-chip">D · Evaluation &amp; telemetry</div>
+            <div class="domain-chip">E · Multi-agent orchestration</div>
+            <div class="domain-chip">F · Guardrails &amp; governance</div>
+          </div>
+
+          <button id="startBtn" class="btn btn-primary btn-full">Generate Exam</button>
+        </section>
+      </div>
+    </div>
+
+    <!-- ── LOADING VIEW ────────────────────────────────────────────── -->
+    <div id="view-loading" class="view hidden">
+      <div class="loading-card">
+        <div class="spinner"></div>
+        <h2>Preparing your exam</h2>
+        <p id="loadingStatus" class="loading-status">Building exam blueprint…</p>
+        <div class="progress-track">
+          <div id="loadingBar" class="progress-fill" style="width:0%"></div>
+        </div>
+        <p id="loadingDetail" class="loading-detail"></p>
+        <ul id="batchLog" class="batch-log"></ul>
+      </div>
+    </div>
+
+    <!-- ── EXAM VIEW ───────────────────────────────────────────────── -->
+    <div id="view-exam" class="view hidden">
+      <header class="exam-header">
+        <div class="exam-meta">
+          <span class="badge badge-domain" id="domainBadge">Domain A</span>
+          <span class="badge badge-type" id="typeBadge">Single choice</span>
+          <span class="badge badge-diff" id="diffBadge">Hard</span>
+        </div>
+        <div class="exam-counter" id="examCounter">Q 1 / 30</div>
+        <div class="exam-timer" id="examTimer">60:00</div>
+      </header>
+
+      <div class="exam-body">
+        <div id="questionCard" class="question-card"></div>
+      </div>
+
+      <footer class="exam-footer">
+        <button id="prevBtn" class="btn btn-ghost">← Prev</button>
+        <div class="q-map" id="qMap"></div>
+        <button id="nextBtn" class="btn btn-secondary">Next →</button>
+        <button id="flagBtn" class="btn btn-icon" title="Flag for review">🚩</button>
+        <button id="submitBtn" class="btn btn-primary">Submit</button>
+      </footer>
+    </div>
+
+    <!-- ── RESULTS VIEW ────────────────────────────────────────────── -->
+    <div id="view-results" class="view hidden">
+      <div class="results-card">
+        <div class="score-ring-wrap">
+          <svg class="score-ring" viewBox="0 0 120 120">
+            <circle class="ring-bg" cx="60" cy="60" r="50"/>
+            <circle class="ring-fill" id="ringFill" cx="60" cy="60" r="50"
+              stroke-dasharray="314" stroke-dashoffset="314"/>
+          </svg>
+          <div class="score-text">
+            <span id="scorePercent">0%</span>
+            <span class="score-label">Score</span>
+          </div>
+        </div>
+
+        <div id="scoreSummary" class="score-summary"></div>
+
+        <div class="domain-breakdown" id="domainBreakdown"></div>
+
+        <div class="results-actions">
+          <button class="btn btn-secondary" id="reviewBtn">Review answers</button>
+          <button class="btn btn-ghost" id="analyticsBtn">Study tools</button>
+          <button class="btn btn-primary" id="newExamBtn">New exam</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── REVIEW VIEW ─────────────────────────────────────────────── -->
+    <div id="view-review" class="view hidden">
+      <div class="review-header">
+        <button class="btn btn-ghost" id="backToResultsBtn">← Results</button>
+        <h2>Answer Review</h2>
+        <div class="review-filters">
+          <button class="filter-pill active" data-filter="all">All</button>
+          <button class="filter-pill" data-filter="wrong">Wrong ❌</button>
+          <button class="filter-pill" data-filter="right">Correct ✅</button>
+        </div>
+      </div>
+      <div id="reviewList" class="review-list"></div>
+    </div>
+
+    <!-- ── ANALYTICS VIEW ─────────────────────────────────────────── -->
+    <div id="view-analytics" class="view hidden">
+      <div class="analytics-wrap">
+        <div class="analytics-header">
+          <button class="btn btn-ghost" id="backToResultsBtn2">← Results</button>
+          <h2>Study Tools</h2>
+        </div>
+
+        <div class="analytics-grid">
+          <div class="stat-card">
+            <div class="stat-label">Overall score</div>
+            <div class="stat-value" id="statScore">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Flagged questions</div>
+            <div class="stat-value" id="statFlagged">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Avg response time</div>
+            <div class="stat-value" id="statAvgTime">—</div>
+          </div>
+        </div>
+
+        <h3>Domain breakdown</h3>
+        <div id="analyticsBreakdown" class="domain-breakdown"></div>
+
+        <h3>Anti-bias check</h3>
+        <div id="antiBiasPanel" class="antibias-panel"></div>
+
+        <h3>Adaptive drills</h3>
+        <div class="drill-buttons">
+          <button class="btn btn-secondary" id="weakDrillBtn">📉 Weak-domain drill</button>
+          <button class="btn btn-secondary" id="mistakeReplayBtn">🔁 Mistake replay</button>
+          <button class="btn btn-secondary" id="subskillDrillBtn">🎯 Sub-skill drill</button>
+          <button class="btn btn-ghost" id="exportAttemptBtn">⬇ Export report</button>
+        </div>
+        <div id="drillResult" class="drill-result hidden"></div>
+      </div>
+    </div>
+
     <script type="module" src="/app.js"></script>
   </body>
 </html>

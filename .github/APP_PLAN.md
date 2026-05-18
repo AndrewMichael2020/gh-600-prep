@@ -7,6 +7,55 @@ This file restores the original detailed plan content as the canonical planning 
 
 ---
 
+## Architecture: dev-generation vs. user-facing exam UI
+
+**This is the single most important design decision in the app.**
+
+### The two modes
+
+| Mode | Who uses it | What it does |
+|------|-------------|--------------|
+| **Dev / generate** | Developers only | Calls OpenAI API, generates a practice exam, saves it to `data/` |
+| **User / exam UI** | End users | Loads pre-generated exams from `data/`, no OpenAI calls |
+
+### Why this split
+
+- The OpenAI API key **never reaches the browser** under any circumstance.
+- Users always see a fast, deterministic exam — no waiting for generation.
+- Developers control quality: they regenerate and review before publishing.
+- `FALLBACK_QUESTIONS` in `src/generation.ts` are **test fixtures only** — they exist so `npm test` can run without an API key; they are never served to real users.
+
+### Dev workflow
+
+```bash
+# one-time or whenever you want fresh questions
+export OPENAI_API_KEY=sk-...
+npm run generate              # default: 30 questions
+npm run generate -- --count 100
+
+# start the server — users never see the generation step
+npm start
+```
+
+### User workflow
+
+1. User opens `http://localhost:3000` (or the deployed URL).
+2. Home page lists all pre-generated exams with date and question count.
+3. User clicks **Take Exam** → takes the timed exam → sees results, review, analytics.
+4. No generation UI is shown unless `OPENAI_API_KEY` is set on the server
+   (dev instances show the "Generate New Exam" form; production instances do not).
+
+### API endpoints
+
+| Endpoint | Access | Purpose |
+|----------|--------|---------|
+| `GET /api/config` | Public | Returns `{ hasApiKey, examCount }` — UI uses this to decide what to render |
+| `GET /api/exams` | Public | Lists stored exams (id, createdAt, questionCount) |
+| `GET /api/exams/:id` | Public | Full exam payload for a specific exam |
+| `GET /api/exams/generate` (SSE) | Dev only (requires API key) | Streams generation progress; saves result to DB |
+
+---
+
 ## Restored original Issue #2 plan
 
 # Issue #2: Refine and implement GH-600 practice exam app architecture

@@ -68,6 +68,20 @@ export async function saveAttempt(attempt: Attempt) {
   await writeJsonArray(attemptsFile, filtered);
 }
 
+export async function listExams(): Promise<Array<{ id: string; createdAt: string; questionCount: number }>> {
+  try {
+    await ensureDataFiles();
+    const all = await readJsonArray<ExamSet>(examsFile);
+    return all.map((e) => ({
+      id: e.id,
+      createdAt: e.createdAt,
+      questionCount: e.questions?.length ?? 0,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export async function getAttempt(id: string): Promise<Attempt | null> {
   try {
     await ensureDataFiles();

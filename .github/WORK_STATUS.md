@@ -5,8 +5,16 @@ Last updated: 2026-05-18 (UTC)
 ## Current phase snapshot
 
 - **Plan reference:** `.github/APP_PLAN.md`
-- **Current phase target:** **Phase 3** (full mock operations + export workflows)
-- **Overall status:** **In progress**
+- **Current phase target:** **Phase 4** (Cloud Run deploy)
+- **Overall status:** ✅ Core architecture complete — ready to deploy
+
+## Architecture (clarified)
+
+The app has two clearly separated modes:
+
+1. **Dev generation** (`npm run generate`): Calls OpenAI API (requires `OPENAI_API_KEY`), saves a full practice exam to `data/exams/`. This is never triggered by users.
+2. **User exam UI**: Serves pre-generated exams from `data/`. No OpenAI calls at runtime. The home page lists available exams; users pick one and take it.
+3. **Test fixtures**: `FALLBACK_QUESTIONS` in `src/generation.ts` are used only when `VITEST=true` or `NODE_ENV=test`. They are never served to real users.
 
 ## Milestone checklist
 
@@ -36,6 +44,18 @@ Last updated: 2026-05-18 (UTC)
 - [x] Run + validate 2 full mock exams end-to-end
 - [x] Export/report workflows
 
+### Phase 3.5 — Architecture hardening (clarified intent)
+
+- [x] Dev-only generation: `generateBatch` throws in production without API key (no silent fallback)
+- [x] `FALLBACK_QUESTIONS` guarded behind test env — never exposed to users
+- [x] `GET /api/config` endpoint — UI learns `hasApiKey` and `examCount` without leaking secrets
+- [x] `GET /api/exams` list endpoint — home page shows pre-generated exams
+- [x] Home page shows exam list; generate form shown only when `hasApiKey=true`
+- [x] `scripts/generate.ts` + `npm run generate` — developer CLI for pre-generation
+- [x] OpenAI API confirmed working with gpt-5.5 (real key tested)
+- [x] JavaScript syntax error in `public/app.js` fixed
+- [x] Express route ordering fixed (`/api/exams/generate` before `/api/exams/:id`)
+
 ### Phase 4 — Cloud Run publish
 
 - [x] Add production Dockerfile and `.dockerignore`
@@ -44,25 +64,15 @@ Last updated: 2026-05-18 (UTC)
 
 ## Recent implementation log
 
-- `7966402` — Added confidence capture + richer frontend analytics.
-- `3ccdf11` — Added weak-domain drill + mistake replay study loops (API, UI wiring, tests).
-- `d6f95a6` — Added user-facing anti-bias dashboard.
-- `e8f9e5d` — Hardened matching/sequence UX + token/cost tracking section.
-- `5f8ebe9` — Added domain/sub-skill drill curation endpoint and prioritization tuning.
-- `a9d4b4b` — Implemented domain/sub-skill drill curation and prioritization.
-- `059175f` — Completed Phase 3 ops checks and added attempt export workflow.
-
-## OpenAI API token and cost tracker (Codex + GitHub)
-
-> Update this section per PR/iteration (best effort). Values may remain `TBD` when provider billing detail is unavailable in-runtime.
-
-| Date (UTC) | Surface | Prompt tokens | Completion tokens | Total tokens | Estimated cost (USD) | Notes |
-|---|---:|---:|---:|---:|---:|---|
-| 2026-05-18 | Codex (this repo iteration) | TBD | TBD | TBD | TBD | Runtime did not expose tokenized billing counters. |
-| 2026-05-18 | GitHub/Copilot-side usage | TBD | TBD | TBD | TBD | Track from GitHub billing/export if available. |
+- Architecture hardened: generation is dev-only (`npm run generate`), fallback questions are test-only, UI serves pre-generated exams
+- Fixed critical Express route ordering bug (`/api/exams/generate` was shadowed by `/:id`)
+- Fixed JavaScript syntax error (orphaned state block at end of `public/app.js`)
+- Complete UI redesign: 6-view SPA replacing bare-bones terminal UI
+- OpenAI gpt-5.5 API confirmed working with real key
 
 ## Immediate next tasks
 
-1. Deploy on Cloud Run from GCP Console and verify `/healthz` + `/`.
-2. Complete `.github/OPENAI_REAL_KEY_TEST_REPORT.md` with passing real-key run evidence.
-3. Record deployed service URL and rollback-tested revision in runbook notes.
+1. Run `npm run generate` with real key to pre-populate at least one exam.
+2. Deploy on Cloud Run from GCP Console and verify `/healthz` + `/`.
+3. Complete `.github/OPENAI_REAL_KEY_TEST_REPORT.md` with passing real-key run evidence.
+4. Record deployed service URL and rollback-tested revision in runbook notes.

@@ -7,7 +7,8 @@
     "test": "vitest run",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
-    "dev": "tsx src/server.ts"
+    "dev": "tsx src/server.ts",
+    "generate": "npx tsx scripts/generate.ts"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +21,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/express": "^5.0.6",
     "@types/node": "^25.8.0",
     "tsx": "^4.22.1",

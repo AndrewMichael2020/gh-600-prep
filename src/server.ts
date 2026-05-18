@@ -2,7 +2,7 @@ import express from "express";
 import path from "node:path";
 import { v4 as uuidv4 } from "uuid";
 import { assembleExam, createPlan, generateBatch, validateBatch } from "./generation.js";
-import { getAttempt, getExam, saveAttempt, saveExam } from "./persistence.js";
+import { getAttempt, getExam, listExams, saveAttempt, saveExam } from "./persistence.js";
 import { scoreAttempt } from "./scoring.js";
 import { buildDomainSubskillDrill, buildMistakeReplay, buildWeakDomainDrill } from "./studyLoops.js";
 import { Attempt } from "./types.js";
@@ -19,6 +19,22 @@ app.use(express.json({ limit: "2mb" }));
 
 app.get("/healthz", (_req, res) => {
   return res.status(200).json({ ok: true, service: "gh-600-prep", timestamp: new Date().toISOString() });
+});
+
+// Reports whether server-side generation is available and how many exams are stored.
+// The frontend uses this to decide whether to show the exam list or the generate flow.
+app.get("/api/config", async (_req, res) => {
+  const exams = await listExams();
+  return res.json({
+    hasApiKey: Boolean(process.env.OPENAI_API_KEY),
+    examCount: exams.length,
+  });
+});
+
+// List all stored exams (summary only — no questions).
+app.get("/api/exams", async (_req, res) => {
+  const exams = await listExams();
+  return res.json(exams);
 });
 
 const requestTracker = new Map<string, { count: number; resetAt: number }>();
@@ -93,6 +109,64 @@ app.get("/api/attempts/:id", async (req, res) => {
   return res.json(attempt);
 });
 
+// NOTE: /api/exams/generate must be registered BEFORE /api/exams/:id
+// to prevent Express matching "generate" as a dynamic :id parameter.
+// Server-side generation pipeline via Server-Sent Events.
+// The client connects once; the server streams batch progress and sends the
+// finished exam on completion.  The generation terminal is never exposed to
+// the user — they only see a progress overlay with human-readable status.
+app.get("/api/exams/generate", async (req, res) => {
+  const questionCount = Math.max(1, Math.min(200, Number(req.query.questionCount || 30)));
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  let closed = false;
+  req.on("close", () => { closed = true; });
+
+  const send = (data: object) => {
+    if (!closed) res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    const plan = createPlan(questionCount);
+    send({ type: "plan", totalBatches: plan.batches.length, totalQuestions: plan.totalQuestions });
+
+    const allQuestions: ReturnType<typeof validateBatch> = [];
+
+    for (let i = 0; i < plan.batches.length; i++) {
+      if (closed) break;
+      const batch = plan.batches[i];
+      send({
+        type: "batch_start",
+        index: i,
+        total: plan.batches.length,
+        domainId: batch.domainId ?? null,
+        domainName: batch.domainName ?? null,
+        typeFocus: batch.typeFocus,
+        questionCount: batch.questionCount,
+      });
+
+      const generated = await generateBatch(plan, batch, allQuestions.map((q) => q.stem));
+      const validated = validateBatch(generated);
+      const accepted = validated.filter((q) => q.metadata.validationStatus !== "rejected");
+      allQuestions.push(...accepted);
+
+      send({ type: "batch_done", index: i, accepted: accepted.length, running: allQuestions.length });
+    }
+
+    const exam = assembleExam(plan, allQuestions as import("./types.js").PracticeQuestion[], []);
+    await saveExam(exam);
+    send({ type: "complete", examId: exam.id, exam });
+  } catch (err) {
+    send({ type: "error", message: err instanceof Error ? err.message : "Generation failed" });
+  } finally {
+    res.end();
+  }
+});
+
 app.get("/api/exams/:id", async (req, res) => {
   const exam = await getExam(req.params.id);
   if (!exam) return res.status(404).json({ error: "Exam not found" });
@@ -147,6 +221,7 @@ app.get("/api/exports/attempt/:attemptId", async (req, res) => {
   res.setHeader("content-disposition", `attachment; filename=\"attempt-${attempt.id}-report.json\"`);
   return res.send(JSON.stringify(payload, null, 2));
 });
+
 const port = Number(process.env.PORT || 3000);
 app.listen(port, () => {
   console.log(`GH-600 prep app running on http://localhost:${port}`);
