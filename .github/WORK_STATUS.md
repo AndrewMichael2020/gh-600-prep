@@ -65,4 +65,4 @@ Last updated: 2026-05-18 (UTC)
 
 1. Start Phase 4 by preparing Cloud Run container/deployment assets.
 2. Add Cloud Run deployment runbook checks (health, rollback, secrets).
-3. Implement production readiness checks for deployed service.
+3. Complete `.github/OPENAI_REAL_KEY_TEST_REPORT.md` with passing real-key run evidence before publish.
