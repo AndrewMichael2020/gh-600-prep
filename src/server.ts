@@ -147,7 +147,6 @@ app.get("/api/exports/attempt/:attemptId", async (req, res) => {
   res.setHeader("content-disposition", `attachment; filename=\"attempt-${attempt.id}-report.json\"`);
   return res.send(JSON.stringify(payload, null, 2));
 });
-
 const port = Number(process.env.PORT || 3000);
 app.listen(port, () => {
   console.log(`GH-600 prep app running on http://localhost:${port}`);
