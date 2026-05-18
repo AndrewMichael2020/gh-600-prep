@@ -273,7 +273,7 @@ function renderQuestion() {
 }
 
 function renderOptions(q) {
-  if (q.type === "sequence_order" || q.type === "matching_magnet") return;
+  if (q.type === "sequence_order" || q.type === "matching_magnet" || q.type === "dropdown_completion") return;
   const container = document.getElementById("optionsContainer");
   const selected = state.answers[q.id];
   const showResult = state.mode === "review";
@@ -380,6 +380,39 @@ function renderStructuredInteraction(q) {
           ${showResult ? `<span class="match-feedback">${isCorr ? "✅" : `❌ → ${escHtml(correct)}`}</span>` : ""}
         </div>`;
       }).join("")}
+    </div>`;
+  }
+  if (q.type === "dropdown_completion") {
+    const pairs = state.answers[q.id]?.pairs ?? {};
+    const showResult = state.mode === "review";
+    const correctPairs = (typeof q.correctAnswer === "object" && q.correctAnswer !== null && "pairs" in q.correctAnswer)
+      ? q.correctAnswer.pairs : {};
+    const slots = q.slots ?? [];
+    const template = q.statementTemplate ?? "";
+
+    // Split template on {{slotN}} placeholders and interleave selects
+    const parts = template.split(/(\{\{[^}]+\}\})/);
+    const rendered = parts.map((part) => {
+      const match = part.match(/^\{\{([^}]+)\}\}$/);
+      if (!match) return `<span class="dc-text">${escHtml(part)}</span>`;
+      const slotId = match[1];
+      const slot = slots.find((s) => s.id === slotId);
+      if (!slot) return `<span class="dc-blank">[${slotId}]</span>`;
+      const selected = pairs[slotId] ?? "";
+      const correct = correctPairs[slotId] ?? "";
+      const isCorr = showResult && selected === correct;
+      const isWrong = showResult && selected && selected !== correct;
+      let cls = "dc-select";
+      if (showResult) cls += isCorr ? " dc-correct" : (isWrong ? " dc-wrong" : "");
+      return `<select class="${cls}" data-match-key="${slotId}"${showResult ? " disabled" : ""}>
+        <option value="">▼</option>
+        ${slot.choices.map((c) => `<option value="${escHtml(c)}"${selected === c ? " selected" : ""}>${escHtml(c)}</option>`).join("")}
+      </select>${showResult ? `<span class="dc-feedback">${isCorr ? "✅" : (isWrong ? `❌ → ${escHtml(correct)}` : "")}</span>` : ""}`;
+    }).join("");
+
+    return `<div class="structured-block dc-block">
+      <p class="match-hint">Select the appropriate options to complete the statement. Each correct selection is worth one point.</p>
+      <div class="dc-statement">${rendered}</div>
     </div>`;
   }
   return "";
@@ -645,6 +678,31 @@ function buildReviewView(filter) {
                 <span class="match-feedback">${isCorr ? "✅" : `❌ → ${escHtml(expected)}`}</span>
               </div>`;
             }).join("")}
+          </div>`;
+        })()
+      : q.type === "dropdown_completion"
+      ? (() => {
+          const pairs = user?.pairs ?? {};
+          const correctPairs = (typeof q.correctAnswer === "object" && q.correctAnswer !== null && "pairs" in q.correctAnswer)
+            ? q.correctAnswer.pairs : {};
+          const slots = q.slots ?? [];
+          const template = q.statementTemplate ?? "";
+          const parts = template.split(/(\{\{[^}]+\}\})/);
+          const rendered = parts.map((part) => {
+            const m = part.match(/^\{\{([^}]+)\}\}$/);
+            if (!m) return `<span class="dc-text">${escHtml(part)}</span>`;
+            const slotId = m[1];
+            const slot = slots.find((s) => s.id === slotId);
+            const selected = pairs[slotId] ?? "";
+            const correct = correctPairs[slotId] ?? "";
+            const isCorr = selected === correct;
+            return `<select class="dc-select${isCorr ? " dc-correct" : " dc-wrong"}" disabled>
+              <option value="${escHtml(selected)}">${escHtml(selected || "—")}</option>
+            </select><span class="dc-feedback">${isCorr ? "✅" : `❌ → ${escHtml(correct)}`}</span>`;
+          }).join("");
+          return `<div class="structured-block dc-block">
+            <p class="match-hint">Statement completion — review:</p>
+            <div class="dc-statement">${rendered}</div>
           </div>`;
         })()
       : `<div class="options">

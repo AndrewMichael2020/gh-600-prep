@@ -3,6 +3,7 @@ export type QuestionType =
   | "multi_select"
   | "sequence_order"
   | "matching_magnet"
+  | "dropdown_completion"
   | "case_study_child"
   | "code_or_config_artifact"
   | "log_or_artifact_interpretation"
@@ -21,6 +22,11 @@ export interface OrderedAnswer {
 
 export interface MatchingAnswer {
   pairs: Record<string, string>;
+}
+
+export interface DropdownSlot {
+  id: string;
+  choices: string[];
 }
 
 export interface QuestionArtifact {
@@ -79,6 +85,8 @@ export interface PracticeQuestion {
   caseStudyId?: string;
   options: AnswerOption[];
   matchChoices?: string[];
+  statementTemplate?: string;
+  slots?: DropdownSlot[];
   correctAnswer: string | string[] | OrderedAnswer | MatchingAnswer;
   explanation: Explanation;
   sourceRefs: SourceRef[];

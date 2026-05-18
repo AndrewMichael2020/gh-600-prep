@@ -523,7 +523,7 @@ h3 { font-size: .95rem; font-weight: 700; color: var(--color-muted); text-transf
   color: var(--color-text, #24292f);
 }
 
-/* ── Matching magnet (HOTSPOT dropdowns) ─────────────────────────── */
+/* ── Matching magnet (row-to-choice dropdown matching) ───────────── */
 .match-hint { font-size: 0.88rem; color: var(--color-muted, #666); margin-bottom: 0.5rem; }
 .match-row {
   display: grid;
@@ -549,3 +549,34 @@ h3 { font-size: .95rem; font-weight: 700; color: var(--color-muted); text-transf
 }
 .match-select:disabled { background: #f3f4f6; cursor: default; }
 .match-feedback { font-size: 0.8rem; white-space: nowrap; }
+
+/* ── Dropdown completion (inline statement selects) ──────────────── */
+.dc-block { padding: 0.75rem 1rem; }
+.dc-statement {
+  font-family: var(--font-mono, "SFMono-Regular", Consolas, monospace);
+  font-size: 0.95rem;
+  line-height: 2.2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--color-surface-alt, #f8f9fa);
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+}
+.dc-text { white-space: pre; }
+.dc-select {
+  padding: 0.25rem 0.4rem;
+  border: 2px solid var(--color-border, #ddd);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  background: #fff;
+  cursor: pointer;
+  min-width: 8rem;
+}
+.dc-select:disabled { background: #f3f4f6; cursor: default; }
+.dc-select.dc-correct { border-color: #059669; background: #d1fae5; }
+.dc-select.dc-wrong   { border-color: #dc2626; background: #fee2e2; }
+.dc-feedback { font-size: 0.8rem; white-space: nowrap; margin-left: 0.1rem; }

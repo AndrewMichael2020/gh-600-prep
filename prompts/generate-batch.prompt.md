@@ -64,7 +64,7 @@ Core principles you never violate:
 - Options are steps (option text = the step description).
 - `correctAnswer`: object with key "order": array of option IDs in correct sequence, e.g. `{"order": ["C","A","D","B"]}`
 
-### `matching_magnet` (HOTSPOT-style dropdown matching)
+### `matching_magnet` (row-to-choice dropdown matching)
 - `options` are the **rows** (left column). Use ids "row1", "row2", "row3", etc. (not A/B/C/D).
   Each option has a label that describes the item to classify/match.
 - `matchChoices`: array of ALL possible answer strings. Include the correct answer for each row
@@ -82,6 +82,21 @@ Core principles you never violate:
 ### `policy_control_selection`
 - Presents a governance/compliance requirement.
 - 4 options; one definitively satisfies the requirement.
+
+### `dropdown_completion` (statement completion with inline dropdowns)
+- Used for "complete the statement/command/config" questions where the candidate selects values
+  to fill in blanks within a sentence, code line, or config snippet.
+- `statementTemplate`: the full statement/sentence/code fragment with `{{slot1}}`, `{{slot2}}`, …
+  placeholders marking each blank (e.g. `"GRANT {{slot1}} ON {{slot2}} TO User1;"`).
+- `slots`: array of slot objects, one per placeholder:
+  `[{"id": "slot1", "choices": ["ALTER", "CONNECT", "EXECUTE"]}, {"id": "slot2", "choices": ["DATABASE: schemaA", "OBJECT: schemaA", "SCHEMA: schemaA"]}]`
+  Each slot's choices include the correct answer plus 2–3 plausible distractors.
+- `correctAnswer`: `{"pairs": {"slot1": "ALTER", "slot2": "SCHEMA: schemaA"}}`
+  (uses the same `pairs` structure as matching_magnet for scoring consistency).
+- `options`: empty array `[]` — not used for this type.
+- NOTE: Each correct selection is worth one point (partial credit per slot).
+- The stem describes a realistic scenario and ends with "How should you complete the [statement/command/config]?"
+- Do NOT use the words "HOTSPOT" anywhere in this question.
 
 ---
 
@@ -227,6 +242,44 @@ Every question must satisfy all five criteria:
 }
 ```
 
+### Example D — dropdown_completion, Domain A, hard
+
+```json
+{
+  "id": "placeholder", "examCode": "GH-600", "domainId": "A",
+  "domainName": "Prepare agent architecture and SDLC processes",
+  "objectiveTags": ["copilot-setup-steps", "agent-environment", "runtime-configuration"],
+  "type": "dropdown_completion", "difficulty": "hard",
+  "stem": "A platform engineer is configuring the runtime environment for a Copilot coding agent that needs access to an internal npm registry. How should you complete the copilot-setup-steps.yml snippet?",
+  "scenario": "The agent must install private packages before running. The engineer has a PAT stored as a repository secret named NPM_TOKEN.",
+  "artifact": {
+    "title": "copilot-setup-steps.yml (partial)",
+    "kind": "yaml",
+    "content": "steps:\n  - name: Configure npm registry\n    run: npm {{slot1}} registry {{slot2}}=$NPM_TOKEN"
+  },
+  "caseStudyId": null,
+  "options": [],
+  "statementTemplate": "npm {{slot1}} registry {{slot2}}=$NPM_TOKEN",
+  "slots": [
+    {"id": "slot1", "choices": ["config set", "install --global", "init", "audit fix"]},
+    {"id": "slot2", "choices": ["//registry.npmjs.org/:_authToken", "--token", "--auth", "//registry.npmjs.org/:password"]}
+  ],
+  "correctAnswer": {"pairs": {
+    "slot1": "config set",
+    "slot2": "//registry.npmjs.org/:_authToken"
+  }},
+  "explanation": {
+    "whyCorrect": "npm config set //registry.npmjs.org/:_authToken=$NPM_TOKEN is the standard way to authenticate with a scoped npm registry using a PAT stored as an environment variable.",
+    "whyDistractorsWrong": {},
+    "examStrategyNote": "Copilot setup-steps questions test whether you know the exact shell idiom — eliminate options that change semantics (install, init, audit) before focusing on the correct auth key format."
+  },
+  "sourceRefs": [
+    {"title": "Customizing the development environment for Copilot coding agent", "url": "https://docs.github.com/en/copilot/customizing-copilot/customizing-the-development-environment-for-copilot-coding-agent", "docType": "official_docs"}
+  ],
+  "metadata": {"generatedAt": "2026-01-01T00:00:00.000Z", "model": "gpt-5.5", "reasoningEffort": "medium", "batchId": "example", "validationStatus": "draft", "ambiguityScore": 0.06}
+}
+```
+
 ---
 
 ## Case Study Batch Mode
@@ -275,7 +328,7 @@ Response format for case study batches:
       "domainId": "{{DOMAIN_ID}}",
       "domainName": "{{DOMAIN_NAME}}",
       "objectiveTags": ["tag1", "tag2"],
-      "type": "<single_choice|multi_select|code_or_config_artifact|log_or_artifact_interpretation|sequence_order|matching_magnet|case_study_child|policy_control_selection>",
+      "type": "<single_choice|multi_select|code_or_config_artifact|log_or_artifact_interpretation|sequence_order|matching_magnet|dropdown_completion|case_study_child|policy_control_selection>",
       "difficulty": "<medium|hard|very_hard>",
       "stem": "Scenario-first question stem.",
       "scenario": "Optional additional context paragraph.",
@@ -284,6 +337,10 @@ Response format for case study batches:
       "options": [{"id": "A", "text": "..."}],
       "matchChoices": [],
       // only for matching_magnet; empty array for all other types
+      "statementTemplate": null,
+      // only for dropdown_completion; null for all other types
+      "slots": [],
+      // only for dropdown_completion; empty array for all other types
       "correctAnswer": "B",
       "explanation": {
         "whyCorrect": "Why correct, citing principle or doc.",

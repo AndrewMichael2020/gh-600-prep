@@ -197,11 +197,11 @@ export async function generateBatch(
  * answer is uniformly distributed and not predictable by position.
  * All fields that reference option ids (correctAnswer, whyDistractorsWrong)
  * are updated to match the new labels.
- * sequence_order and matching_magnet are left untouched — their correctAnswer
- * is not a simple letter and shuffling them requires different logic.
+ * sequence_order, matching_magnet, and dropdown_completion are left untouched —
+ * their correctAnswer is not a simple letter and shuffling them requires different logic.
  */
 function shuffleOptionKeys(q: PracticeQuestion): PracticeQuestion {
-  if (q.type === "sequence_order" || q.type === "matching_magnet") return q;
+  if (q.type === "sequence_order" || q.type === "matching_magnet" || q.type === "dropdown_completion") return q;
   if (!q.options?.length) return q;
 
   // Fisher-Yates shuffle of the option objects themselves
