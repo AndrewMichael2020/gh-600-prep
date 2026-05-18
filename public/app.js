@@ -6,6 +6,9 @@ const state = {
   mode: "exam",
   timer: null,
   secondsLeft: 0,
+  confidence: {},
+  questionStartedAt: 0,
+  responseTimeMs: {},
 };
 
 const el = {
@@ -24,6 +27,9 @@ const el = {
   reviewContent: document.getElementById("reviewContent"),
   analytics: document.getElementById("analytics"),
   analyticsContent: document.getElementById("analyticsContent"),
+  weakDrillBtn: document.getElementById("weakDrillBtn"),
+  mistakeReplayBtn: document.getElementById("mistakeReplayBtn"),
+  studyLoopContent: document.getElementById("studyLoopContent"),
 };
 
 function log(msg) {
@@ -37,7 +43,9 @@ function shuffle(arr) {
 
 function renderQuestion() {
   const q = state.exam.questions[state.currentIndex];
+  state.questionStartedAt = Date.now();
   const selected = state.answers[q.id] || (q.type === "multi_select" ? [] : "");
+  const confidence = state.confidence[q.id] || "";
   const mode = state.mode;
 
   const optionsHtml = q.options
@@ -69,6 +77,15 @@ function renderQuestion() {
       <p>${q.scenario || ""}</p>
       ${artifact}
       <div>${optionsHtml}</div>
+      <label class="option">
+        Confidence:
+        <select id="confidenceSelect">
+          <option value="" ${confidence === "" ? "selected" : ""}>Not set</option>
+          <option value="guessed" ${confidence === "guessed" ? "selected" : ""}>Guessed</option>
+          <option value="somewhat_confident" ${confidence === "somewhat_confident" ? "selected" : ""}>Somewhat confident</option>
+          <option value="confident" ${confidence === "confident" ? "selected" : ""}>Confident</option>
+        </select>
+      </label>
       ${explanation}
     </div>
   `;
@@ -87,6 +104,23 @@ function renderQuestion() {
       }
     });
   });
+
+  const confidenceSelect = document.getElementById("confidenceSelect");
+  confidenceSelect?.addEventListener("change", () => {
+    const value = confidenceSelect.value;
+    if (!value) {
+      delete state.confidence[q.id];
+      return;
+    }
+    state.confidence[q.id] = value;
+  });
+}
+
+function recordQuestionTime() {
+  if (!state.exam || !state.questionStartedAt) return;
+  const q = state.exam.questions[state.currentIndex];
+  const elapsed = Math.max(0, Date.now() - state.questionStartedAt);
+  state.responseTimeMs[q.id] = (state.responseTimeMs[q.id] || 0) + elapsed;
 }
 
 function startTimer(questionCount) {
@@ -151,6 +185,8 @@ async function generate() {
   state.exam = exam;
   state.currentIndex = 0;
   state.answers = {};
+  state.confidence = {};
+  state.responseTimeMs = {};
   state.flagged.clear();
   document.getElementById("exam").classList.remove("hidden");
   renderQuestion();
@@ -159,11 +195,12 @@ async function generate() {
 
 async function submitExam() {
   if (!state.exam) return;
+  recordQuestionTime();
   clearInterval(state.timer);
   const attempt = await fetch("/api/attempts", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ examId: state.exam.id, answers: state.answers, flagged: [...state.flagged], confidence: {} }),
+    body: JSON.stringify({ examId: state.exam.id, answers: state.answers, flagged: [...state.flagged], confidence: state.confidence }),
   }).then((r) => r.json());
 
   document.getElementById("review").classList.remove("hidden");
@@ -187,22 +224,58 @@ async function submitExam() {
     .join("");
   el.reviewContent.innerHTML = reviewHtml;
 
+  const byTypeTimes = {};
+  const distractorAttraction = {};
+  for (const q of state.exam.questions) {
+    const ms = state.responseTimeMs[q.id] || 0;
+    byTypeTimes[q.type] ??= { totalMs: 0, count: 0 };
+    byTypeTimes[q.type].totalMs += ms;
+    byTypeTimes[q.type].count += 1;
+    const user = state.answers[q.id];
+    if (typeof q.correctAnswer === "string" && typeof user === "string" && user !== q.correctAnswer) {
+      const key = `${q.id}:${user}`;
+      distractorAttraction[key] = (distractorAttraction[key] || 0) + 1;
+    }
+  }
+  const avgResponseTimeByTypeSeconds = Object.fromEntries(
+    Object.entries(byTypeTimes).map(([type, v]) => [type, Number((v.totalMs / Math.max(1, v.count) / 1000).toFixed(1))]),
+  );
+
   el.analyticsContent.textContent = JSON.stringify({
     overallScore: attempt.score.overall,
     domainBreakdown: attempt.score.byDomain,
     incorrectQuestionIds: attempt.score.incorrectQuestionIds,
+    confidenceDistribution: Object.values(state.confidence).reduce((acc, label) => {
+      acc[label] = (acc[label] || 0) + 1;
+      return acc;
+    }, {}),
+    avgResponseTimeByTypeSeconds,
+    distractorAttraction,
     flagged: [...state.flagged],
   }, null, 2);
+
+  el.weakDrillBtn.onclick = async () => {
+    const payload = await fetch(`/api/study/weak-domain-drill/${attempt.id}?limit=10`).then((r) => r.json());
+    const ids = (payload.questions || []).map((q) => q.id);
+    el.studyLoopContent.textContent = `Weak-domain drill (${ids.length}):\n${ids.join("\n")}`;
+  };
+  el.mistakeReplayBtn.onclick = async () => {
+    const payload = await fetch(`/api/study/mistake-replay/${attempt.id}?limit=20`).then((r) => r.json());
+    const ids = (payload.questions || []).map((q) => q.id);
+    el.studyLoopContent.textContent = `Mistake replay (${ids.length}):\n${ids.join("\n")}`;
+  };
 }
 
 el.generateBtn.addEventListener("click", generate);
 el.prevBtn.addEventListener("click", () => {
   if (!state.exam) return;
+  recordQuestionTime();
   state.currentIndex = Math.max(0, state.currentIndex - 1);
   renderQuestion();
 });
 el.nextBtn.addEventListener("click", () => {
   if (!state.exam) return;
+  recordQuestionTime();
   state.currentIndex = Math.min(state.exam.questions.length - 1, state.currentIndex + 1);
   renderQuestion();
 });
