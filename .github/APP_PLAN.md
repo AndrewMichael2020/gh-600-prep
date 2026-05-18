@@ -311,6 +311,7 @@ Track overall score, domain/item-type/difficulty breakdown, response timing, fla
 - Phase 1: working vertical slice (configurable count, batched generation, persistence, exam/review/score/domain breakdown)
 - Phase 2: matching/sequence completion, deeper analytics, anti-bias dashboard, weakness drills, confidence/flagging
 - Phase 3: full exam operations and export workflows
+- Phase 4: publish the app on Google Cloud Run (containerize, configure secrets/env, deploy, verify public endpoint)
 
 ## Acceptance criteria
 

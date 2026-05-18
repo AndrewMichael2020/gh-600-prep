@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { buildMistakeReplay, buildWeakDomainDrill } from "../src/studyLoops.js";
+import { buildDomainSubskillDrill, buildMistakeReplay, buildWeakDomainDrill } from "../src/studyLoops.js";
 import { Attempt, PracticeQuestion } from "../src/types.js";
 
-const q = (id: string, domainId: string): PracticeQuestion => ({
+const q = (id: string, domainId: string, objectiveTags: string[] = []): PracticeQuestion => ({
   id,
   examCode: "GH-600",
   domainId,
   domainName: domainId,
-  objectiveTags: [],
+  objectiveTags,
   type: "single_choice",
   difficulty: "hard",
   stem: id,
@@ -36,5 +36,20 @@ describe("study loops", () => {
 
   it("builds mistake replay from incorrect question ids", () => {
     expect(buildMistakeReplay(questions, attempt, 5).map((x) => x.id)).toEqual(["q1", "q3"]);
+  });
+
+  it("curates domain/sub-skill drill with miss-first and weak-subskill priority", () => {
+    const richer = [
+      q("q1", "A", ["permissions"]),
+      q("q2", "A", ["permissions", "audit"]),
+      q("q3", "A", ["audit"]),
+      q("q4", "B", ["mcp"]),
+    ];
+    const a2: Attempt = {
+      ...attempt,
+      score: { ...attempt.score, byDomain: { A: 30, B: 80 }, incorrectQuestionIds: ["q2", "q3"] },
+      confidence: { q2: "guessed", q3: "somewhat_confident" },
+    };
+    expect(buildDomainSubskillDrill(richer, a2, 3).map((x) => x.id)).toEqual(["q2", "q3", "q1"]);
   });
 });

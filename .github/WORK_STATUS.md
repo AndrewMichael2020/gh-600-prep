@@ -28,7 +28,7 @@ Last updated: 2026-05-18 (UTC)
 - [x] Mistake-replay endpoint and UI trigger
 - [x] Anti-bias dashboard (expanded, user-facing)
 - [x] Matching/sequence interaction UX hardening
-- [ ] Domain/sub-skill drill curation and prioritization tuning
+- [x] Domain/sub-skill drill curation and prioritization tuning
 
 ### Phase 3 — Full mock ops
 
@@ -36,11 +36,19 @@ Last updated: 2026-05-18 (UTC)
 - [ ] Run + validate 2 full mock exams end-to-end
 - [ ] Export/report workflows
 
+### Phase 4 — Cloud Run publish
+
+- [ ] Add production Dockerfile and `.dockerignore`
+- [ ] Add Cloud Run deployment steps and env/secret mapping docs
+- [ ] Deploy service and verify public health/app endpoint
+
 ## Recent implementation log
 
 - `7966402` — Added confidence capture + richer frontend analytics.
 - `3ccdf11` — Added weak-domain drill + mistake replay study loops (API, UI wiring, tests).
 - `d6f95a6` — Added user-facing anti-bias dashboard.
+- `e8f9e5d` — Hardened matching/sequence UX + token/cost tracking section.
+- `5f8ebe9` — Added domain/sub-skill drill curation endpoint and prioritization tuning.
 
 ## OpenAI API token and cost tracker (Codex + GitHub)
 
@@ -53,6 +61,6 @@ Last updated: 2026-05-18 (UTC)
 
 ## Immediate next tasks
 
-1. Add a visible anti-bias dashboard section in analytics (position distribution + longest-option ratio trend).
-2. Improve sequence/matching UI interactions for exam realism and lower input ambiguity.
-3. Extend study-loop logic to include sub-skill tagging and weighted replay ordering.
+1. Complete Phase 3 full mock operations and export workflow hardening.
+2. Start Phase 4 by preparing Cloud Run container/deployment assets.
+3. Add runbook checks for post-deploy verification and rollback.

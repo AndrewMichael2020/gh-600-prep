@@ -30,6 +30,7 @@ const el = {
   antiBiasContent: document.getElementById("antiBiasContent"),
   weakDrillBtn: document.getElementById("weakDrillBtn"),
   mistakeReplayBtn: document.getElementById("mistakeReplayBtn"),
+  subskillDrillBtn: document.getElementById("subskillDrillBtn"),
   studyLoopContent: document.getElementById("studyLoopContent"),
 };
 
@@ -227,6 +228,7 @@ function renderQuestion() {
       });
     });
   }
+
   const confidenceSelect = document.getElementById("confidenceSelect");
   confidenceSelect?.addEventListener("change", () => {
     const value = confidenceSelect.value;
@@ -390,6 +392,11 @@ async function submitExam() {
     const payload = await fetch(`/api/study/mistake-replay/${attempt.id}?limit=20`).then((r) => r.json());
     const ids = (payload.questions || []).map((q) => q.id);
     el.studyLoopContent.textContent = `Mistake replay (${ids.length}):\n${ids.join("\n")}`;
+  };
+  el.subskillDrillBtn.onclick = async () => {
+    const payload = await fetch(`/api/study/domain-subskill-drill/${attempt.id}?limit=12`).then((r) => r.json());
+    const lines = (payload.questions || []).map((q) => `${q.id} [${q.objectiveTags.join(", ")}]`);
+    el.studyLoopContent.textContent = `Domain/sub-skill drill (${lines.length}):\n${lines.join("\n")}`;
   };
 }
 
