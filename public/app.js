@@ -38,7 +38,7 @@ async function initSetupView() {
   ]);
 
   if (exams.length > 0) {
-    renderExamList(exams);
+    renderExamList(exams, cfg.isDev);
     document.getElementById("examListSection").classList.remove("hidden");
   }
 
@@ -50,8 +50,22 @@ async function initSetupView() {
   }
 }
 
-function renderExamList(exams) {
+async function renderExamList(exams, isDev = false) {
   const ul = document.getElementById("examList");
+
+  // Fetch PDF status for all exams in parallel (dev only)
+  let pdfStatusMap = {};
+  if (isDev) {
+    const statuses = await Promise.all(
+      exams.map((e) =>
+        fetch(`/api/exams/${e.id}/pdf-status`)
+          .then((r) => r.json())
+          .catch(() => ({ exists: false, url: null }))
+      )
+    );
+    exams.forEach((e, i) => { pdfStatusMap[e.id] = statuses[i]; });
+  }
+
   ul.innerHTML = exams
     .slice()
     .reverse() // newest first
@@ -59,25 +73,47 @@ function renderExamList(exams) {
       const date = new Date(e.createdAt).toLocaleDateString(undefined, {
         month: "short", day: "numeric", year: "numeric",
       });
-      return `<li class="exam-list-item">
+      const pdfStatus = pdfStatusMap[e.id] ?? { exists: false, url: null };
+      const pdfButtons = isDev ? `
+        <div class="exam-pdf-actions">
+          <button class="btn btn-outline btn-sm btn-pdf-generate" data-exam-id="${escHtml(e.id)}" title="Generate Practice PDF (takes ~30s)">
+            📄 Generate PDF
+          </button>
+          ${pdfStatus.exists ? `
+          <a class="btn btn-outline btn-sm btn-pdf-download" href="${escHtml(pdfStatus.url)}" download title="Download PDF">
+            ⬇ Download PDF
+          </a>` : `
+          <span class="btn btn-outline btn-sm btn-pdf-download hidden" data-exam-id="${escHtml(e.id)}"></span>`}
+        </div>
+      ` : "";
+      return `<li class="exam-list-item${isDev ? " exam-list-item--dev" : ""}">
         <div class="exam-list-meta">
           <span class="exam-list-date">${escHtml(date)}</span>
           <span class="exam-list-count">${e.questionCount} questions</span>
         </div>
-        <div class="exam-list-actions">
-          <button class="btn btn-primary btn-sm" data-exam-id="${escHtml(e.id)}" data-exam-mode="exam">🎯 Exam</button>
-          <button class="btn btn-secondary btn-sm" data-exam-id="${escHtml(e.id)}" data-exam-mode="review">📖 Practice</button>
+        <div class="exam-list-right">
+          <div class="exam-list-actions">
+            <button class="btn btn-primary btn-sm" data-exam-id="${escHtml(e.id)}" data-exam-mode="exam">🎯 Exam</button>
+            <button class="btn btn-secondary btn-sm" data-exam-id="${escHtml(e.id)}" data-exam-mode="review">📖 Practice</button>
+          </div>
+          ${pdfButtons}
         </div>
       </li>`;
     })
     .join("");
 
-  ul.querySelectorAll("[data-exam-id]").forEach((btn) => {
+  ul.querySelectorAll("[data-exam-mode]").forEach((btn) => {
     btn.addEventListener("click", () => {
       state.mode = btn.dataset.examMode ?? "exam";
       loadExam(btn.dataset.examId);
     });
   });
+
+  if (isDev) {
+    ul.querySelectorAll(".btn-pdf-generate").forEach((btn) => {
+      btn.addEventListener("click", () => triggerPdfGeneration(btn.dataset.examId, btn));
+    });
+  }
 }
 
 async function loadExam(examId) {
@@ -96,6 +132,44 @@ async function loadExam(examId) {
 }
 
 initSetupView();
+
+// ── PDF generation trigger ───────────────────────────────────────────
+async function triggerPdfGeneration(examId, triggerBtn) {
+  const li = triggerBtn.closest("li");
+  triggerBtn.disabled = true;
+  triggerBtn.textContent = "⏳ Building PDF…";
+
+  try {
+    const res = await fetch(`/api/exams/${examId}/pdf`, { method: "POST" });
+    // Read as text first so a non-JSON response doesn't swallow the real error
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error(text || `HTTP ${res.status}`); }
+    if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+
+    triggerBtn.textContent = "📄 Regenerate PDF";
+    triggerBtn.disabled = false;
+
+    // Show / update the download link
+    const dlBtn = li.querySelector(".btn-pdf-download");
+    if (dlBtn && dlBtn.tagName === "SPAN") {
+      // Replace placeholder span with a real anchor
+      const a = document.createElement("a");
+      a.className = "btn btn-outline btn-sm btn-pdf-download";
+      a.href = data.url;
+      a.download = "";
+      a.title = "Download PDF";
+      a.textContent = "⬇ Download PDF";
+      dlBtn.replaceWith(a);
+    } else if (dlBtn && dlBtn.tagName === "A") {
+      dlBtn.href = data.url;
+    }
+  } catch (err) {
+    triggerBtn.textContent = "📄 Generate PDF";
+    triggerBtn.disabled = false;
+    alert(`PDF generation failed:\n${err.message}`);
+  }
+}
 
 // ── Domain distribution preview ─────────────────────────────────────
 const DOMAIN_BASES = [

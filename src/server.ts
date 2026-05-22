@@ -1,6 +1,7 @@
 import express from "express";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { generateExamPdf } from "./pdfExport.js";
 import { v4 as uuidv4 } from "uuid";
 
 const IS_DEV = process.env.NODE_ENV !== "production";
@@ -80,6 +81,8 @@ app.use((req, res, next) => {
   return next();
 });
 app.use(express.static(path.join(process.cwd(), "public")));
+// Serve generated PDFs (and other exam files) from data/exams/
+app.use("/exams", express.static(path.join(process.cwd(), "data/exams")));
 
 app.post("/api/exams/blueprint", (req, res) => {
   const parsed = blueprintRequestSchema.safeParse(req.body);
@@ -139,7 +142,35 @@ app.get("/api/attempts/:id", async (req, res) => {
 
 // NOTE: /api/exams/generate must be registered BEFORE /api/exams/:id
 // to prevent Express matching "generate" as a dynamic :id parameter.
-// Server-side generation pipeline via Server-Sent Events.
+
+// ── PDF generation (dev only) ─────────────────────────────────────────────────
+// GET  /api/exams/:id/pdf-status  → { exists: bool, url: string|null }
+// POST /api/exams/:id/pdf         → triggers Playwright PDF build; streams progress via SSE
+
+app.get("/api/exams/:id/pdf-status", (req, res) => {
+  const pdfPath = path.join(process.cwd(), "data/exams", `${req.params.id}.pdf`);
+  const exists = existsSync(pdfPath);
+  return res.json({ exists, url: exists ? `/exams/${req.params.id}.pdf` : null });
+});
+
+app.post("/api/exams/:id/pdf", async (req, res) => {
+  if (!IS_DEV) return res.status(403).json({ error: "PDF generation is only available in dev mode." });
+
+  const examId = req.params.id;
+  const exam = await getExam(examId);
+  if (!exam) return res.status(404).json({ error: "Exam not found" });
+
+  try {
+    const outPath = await generateExamPdf(exam);
+    return res.json({ ok: true, url: `/exams/${examId}.pdf`, path: outPath });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[PDF] Generation failed:", msg);
+    return res.status(500).json({ error: msg });
+  }
+});
+
+
 // The client connects once; the server streams batch progress and sends the
 // finished exam on completion.  The generation terminal is never exposed to
 // the user — they only see a progress overlay with human-readable status.

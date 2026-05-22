@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>GH-600 Practice Exam — Friday, May 22, 2026</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", Arial, sans-serif; font-size: 11pt; color: #1f2328; line-height: 1.5; }
+
+    /* Cover */
+    .cover { page-break-after: always; display: flex; flex-direction: column;
+             align-items: center; justify-content: center; height: 100vh; text-align: center; }
+    .cover h1 { font-size: 28pt; margin-bottom: 12px; }
+    .cover .subtitle { font-size: 14pt; color: #57606a; margin-bottom: 24px; }
+    .cover .meta { font-size: 11pt; color: #57606a; }
+
+    /* Questions */
+    .question { page-break-inside: avoid; border: 1px solid #d0d7de;
+                border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; }
+    .q-header { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; }
+    .q-num { font-weight: 700; font-size: 12pt; min-width: 36px; }
+    .badge { padding: 2px 8px; border-radius: 12px; font-size: 8.5pt;
+             font-weight: 600; border: 1px solid rgba(0,0,0,.08); }
+    .badge.type { background: #f3f4f6; }
+
+    .stem { font-size: 11.5pt; font-weight: 500; margin-bottom: 8px; }
+    .scenario { background: #f6f8fa; border-left: 3px solid #0969da;
+                padding: 8px 12px; margin-bottom: 10px; font-size: 10.5pt; }
+
+    /* Artifact */
+    .artifact { margin-bottom: 12px; }
+    .artifact-title { font-size: 9pt; font-weight: 600; color: #57606a; margin-bottom: 4px; }
+    pre { background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px;
+          padding: 10px 14px; font-size: 9pt; white-space: pre-wrap;
+          word-break: break-all; font-family: "Consolas", "Monaco", monospace; }
+
+    /* Options */
+    .options { margin-bottom: 12px; }
+    .opt { display: flex; align-items: baseline; gap: 8px; padding: 5px 8px;
+           border-radius: 4px; margin-bottom: 4px; font-size: 10.5pt; }
+    .opt.correct { background: #dafbe1; border: 1px solid #1a7f37; }
+    .opt-id { font-weight: 700; min-width: 20px; }
+    .tick { color: #1a7f37; font-weight: 700; margin-left: auto; }
+    .match-hint { font-size: 9.5pt; color: #57606a; margin-bottom: 6px; }
+    .choices-note { font-size: 9pt; color: #57606a; margin-top: 6px; }
+    .dc-statement { font-size: 10.5pt; line-height: 2; }
+    .dc-answer { background: #dafbe1; border: 1px solid #1a7f37; border-radius: 3px;
+                 padding: 1px 6px; font-weight: 600; color: #1a7f37; }
+
+    /* Explanation */
+    .explanation { background: #f6f8fa; border-radius: 6px; padding: 12px 16px; margin-top: 10px; }
+    .exp-title { font-weight: 600; font-size: 10pt; margin-bottom: 4px; margin-top: 8px; }
+    .exp-title:first-child { margin-top: 0; }
+    .exp-body { font-size: 10pt; color: #444; margin-bottom: 6px; }
+    .distractor-list { font-size: 10pt; color: #444; padding-left: 20px; margin-bottom: 6px; }
+    .distractor-list li { margin-bottom: 2px; }
+    .strategy-note { font-size: 9.5pt; color: #9a6700; background: #fff8c5;
+                     border-radius: 4px; padding: 6px 10px; margin-top: 6px; }
+    .tags { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
+    .tag { background: #e0f2fe; color: #0c4a6e; border-radius: 10px;
+           padding: 2px 8px; font-size: 8pt; }
+
+    /* Case study */
+    .cs-panel { background: #fffbeb; border: 1px solid #f59e0b;
+                border-radius: 6px; padding: 12px 16px; margin-bottom: 12px; }
+    .cs-header { font-weight: 700; font-size: 10pt; margin-bottom: 6px; color: #92400e; }
+    .cs-intro { font-size: 10pt; margin-bottom: 8px; }
+    .cs-section { margin-bottom: 8px; }
+    .cs-section-heading { font-weight: 600; font-size: 10pt; margin-bottom: 2px; }
+    .cs-section-body { font-size: 10pt; color: #444; }
+
+    /* Answer key */
+    .answer-key { page-break-before: always; }
+    .answer-key h2 { font-size: 16pt; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+    th, td { border: 1px solid #d0d7de; padding: 5px 10px; text-align: left; }
+    th { background: #f6f8fa; font-weight: 600; }
+    tr:nth-child(even) td { background: #fafbfc; }
+
+    /* Section title */
+    .section-title { font-size: 18pt; font-weight: 700; margin: 32px 0 20px; page-break-before: always; }
+    .section-title:first-of-type { page-break-before: avoid; }
+
+    @page { margin: 20mm 18mm; }
+  </style>
+</head>
+<body>
+
+  <!-- Cover -->
+  <div class="cover">
+    <div style="font-size:48pt;margin-bottom:16px;">⚡</div>
+    <h1>GH-600 Practice Exam</h1>
+    <div class="subtitle">Developing in Agentic AI Systems — Practice Mode</div>
+    <div class="meta">
+      10 questions &nbsp;·&nbsp; Friday, May 22, 2026<br/>
+      <small>Correct answers highlighted · Full explanations included</small>
+    </div>
+  </div>
+
+  <!-- Questions -->
+  <h2 class="section-title">Questions &amp; Answers</h2>
+  <div class="question" id="q1">
+    <div class="q-header">
+      <span class="q-num">Q1</span>
+      <span class="badge domain" style="background:#ede9fe">
+        Domain B: MCP/tool use and environment permissions
+      </span>
+      <span class="badge type">single choice</span>
+      <span class="badge diff" style="background:#fff8c5">very_hard</span>
+    </div>
+    
+    <p class="stem">A healthcare engineering organization enables MCP servers in Copilot for a pilot group. The security team configures the policy to use Registry only, but the pilot includes repositories with regulated data and local MCP configurations that developers can edit. What should the platform owner do to satisfy the highest-security requirement?</p>
+    <div class="scenario">The organization wants to prevent non-approved MCP servers from being used during the pilot, not merely detect usage after the fact.</div>
+    
+    <div class="options">
+    <div class="opt correct">
+        <span class="opt-id">A</span>
+        <span>Disable MCP servers for the regulated pilot until stricter enforcement is available, then re-enable approved servers.</span>
+        <span class="tick">✓</span>
+      </div><div class="opt ">
+        <span class="opt-id">B</span>
+        <span>Allow local MCP servers when their configured server ID matches an entry uploaded to the registry.</span>
+        
+      </div><div class="opt ">
+        <span class="opt-id">C</span>
+        <span>Require developers to rename local MCP servers to match registry IDs before starting Copilot sessions.</span>
+        
+      </div><div class="opt ">
+        <span class="opt-id">D</span>
+        <span>Keep Registry only enabled and review Copilot session logs weekly for unexpected MCP server names.</span>
+        
+      </div>
+  </div>
+    <div class="explanation">
+    <div class="exp-title">✅ Why the correct answer is right</div>
+    <div class="exp-body">GitHub documents current MCP allowlist enforcement limitations, including server name or ID matching and lack of strict enforcement that prevents non-registry servers. For the highest-security requirement, disabling MCP servers until strict enforcement is available is the safest preventive control.</div>
+    <div class="exp-title">❌ Why the other options are wrong</div><ul class="distractor-list"><li><strong>D:</strong> Weekly log review is detective, not preventive, and leaves a bypass window during regulated agent runs.</li><li><strong>B:</strong> Registry only is more restrictive than Allow all, but documented limitations still leave bypass risk through editable configurations.</li><li><strong>C:</strong> Renaming servers to match registry IDs relies on the same name or ID matching behavior that the limitation warns about.</li></ul>
+    <div class="strategy-note">💡 For GH-600 governance questions, distinguish policy intent from actual enforcement behavior. If a documented limitation leaves a bypass, choose the preventive control over monitoring.</div>
+    <div class="tags"><span class="tag">mcp-allowlist</span> <span class="tag">mcp-governance</span> <span class="tag">least-privilege</span> <span class="tag">safe-execution-boundaries</span></div>
+  </div>
+  </div>
+<div class="question" id="q2">
+    <div class="q-header">
+      <span class="q-num">Q2</span>
+      <span class="badge domain" style="background:#ffe4e6">
+        Domain E: Multi-agent orchestration and incident response
+      </span>
+      <span class="badge type">code or config artifact</span>
+      <span class="badge diff" style="background:#ffebe9">hard</span>
+    </div>
+    
+    <p class="stem">A developer experience team is building an observability panel for an orchestrator-worker workflow that uses Copilot SDK custom agents. During an incident review, two parallel security-auditor sub-agents overwrote each other's status in the panel, and the team could not identify which failed worker caused the parent session to continue with incomplete results. Which change best fixes the implementation?</p>
+    <div class="scenario">The team must preserve enough event data to reconstruct parallel sub-agent execution, detect failed workers, and support a human-in-the-loop recovery checkpoint before integration.</div>
+    <div class="artifact">
+      <div class="artifact-title">📄 Current sub-agent event handler</div>
+      <pre><code>type AgentNode = {
+  name: string;
+  displayName?: string;
+  status: &quot;running&quot; | &quot;completed&quot; | &quot;failed&quot;;
+  error?: string;
+};
+
+const agentNodes = new Map&lt;string, AgentNode&gt;();
+
+session.on((event) =&gt; {
+  if (event.type === &quot;subagent.selected&quot;) {
+    agentNodes.set(event.data.agentName, {
+      name: event.data.agentName,
+      displayName: event.data.agentDisplayName,
+      status: &quot;running&quot;,
+    });
+  }
+
+  if (event.type === &quot;subagent.completed&quot;) {
+    const node = agentNodes.get(event.data.agentName);
+    if (node) node.status = &quot;completed&quot;;
+  }
+
+  if (event.type === &quot;subagent.failed&quot;) {
+    logger.warn(`Sub-agent failed: ${event.data.error}`);
+  }
+});</code></pre>
+    </div>
+    <div class="options">
+    <div class="opt ">
+        <span class="opt-id">A</span>
+        <span>Keep agentName as the key, then compare draft PR branches after all workers finish.</span>
+        
+      </div><div class="opt correct">
+        <span class="opt-id">B</span>
+        <span>Key nodes by toolCallId from started events, then persist completed and failed outcomes.</span>
+        <span class="tick">✓</span>
+      </div><div class="opt ">
+        <span class="opt-id">C</span>
+        <span>Track only selected events, then restart the parent session when any worker reports an error.</span>
+        
+      </div><div class="opt ">
+        <span class="opt-id">D</span>
+        <span>Move each worker to a separate session, then disable streaming to reduce telemetry volume.</span>
+        
+      </div>
+  </div>
+    <div class="explanation">
+    <div class="exp-title">✅ Why the correct answer is right</div>
+    <div class="exp-body">The implementation should correlate each sub-agent execution by toolCallId because parallel invocations of the same custom agent can share the same agentName. Capturing subagent.started, subagent.completed, and subagent.failed outcomes creates an execution tree that supports incident review and recovery decisions.</div>
+    <div class="exp-title">❌ Why the other options are wrong</div><ul class="distractor-list"><li><strong>A:</strong> Branch comparison is useful after code is produced, but it does not reconstruct the event tree or identify the failed invocation reliably.</li><li><strong>C:</strong> Selected events show which agent was chosen, but they do not include the execution correlation data needed for parallel workers.</li><li><strong>D:</strong> Separate sessions and reduced streaming remove useful orchestration signals instead of improving observability and recovery.</li></ul>
+    <div class="strategy-note">💡 For GH-600 multi-agent observability questions, prefer answers that preserve correlation identifiers and failure artifacts. Avoid fixes that rely only on final PR state or reduce telemetry.</div>
+    <div class="tags"><span class="tag">subagent-observability</span> <span class="tag">multi-agent-recovery</span> <span class="tag">execution-tree</span></div>
+  </div>
+  </div>
+<div class="question" id="q3">
+    <div class="q-header">
+      <span class="q-num">Q3</span>
+      <span class="badge domain" style="background:#dbeafe">
+        Domain A: Prepare agent architecture and SDLC processes
+      </span>
+      <span class="badge type">code or config artifact</span>
+      <span class="badge diff" style="background:#ffebe9">hard</span>
+    </div>
+    
+    <p class="stem">A SaaS company is introducing an organization-level custom Copilot agent for risky billing-system changes. Architecture leads require the agent to inspect the repository and produce an implementation plan, but they do not want the same agent to modify code or run commands until a maintainer approves the plan in GitHub. Which change best satisfies the requirement?</p>
+    <div class="scenario">The platform team wants the plan to be reviewable in normal SDLC tooling and wants to avoid relying only on post-change controls.</div>
+    <div class="artifact">
+      <div class="artifact-title">📄 agents/billing-implementation-planner.agent.md</div>
+      <pre><code>---
+name: billing-implementation-planner
+description: Creates implementation plans for billing changes and may implement low-risk fixes
+tools: [&quot;read&quot;, &quot;search&quot;, &quot;edit&quot;, &quot;execute&quot;]
+---
+
+You are responsible for billing implementation work.
+
+For each assigned issue:
+1. Inspect the affected services and tests.
+2. Write an implementation plan.
+3. Implement low-risk changes immediately when the plan is clear.
+4. If tests fail, fix the failures and continue without interrupting the user.</code></pre>
+    </div>
+    <div class="options">
+    <div class="opt ">
+        <span class="opt-id">A</span>
+        <span>Keep edit and execute tools, require approval before merge, and rely on branch protection to catch unsafe generated changes.</span>
+        
+      </div><div class="opt correct">
+        <span class="opt-id">B</span>
+        <span>Limit tools to read and search, require a structured plan artifact, and start implementation only after human approval.</span>
+        <span class="tick">✓</span>
+      </div><div class="opt ">
+        <span class="opt-id">C</span>
+        <span>Add CODEOWNERS and required CI, allowing the planner to commit code when its plan meets acceptance criteria.</span>
+        
+      </div><div class="opt ">
+        <span class="opt-id">D</span>
+        <span>Publish the agent from .github-private with internal visibility, preserving all tools so organization audit logs capture usage.</span>
+        
+      </div>
+  </div>
+    <div class="explanation">
+    <div class="exp-title">✅ Why the correct answer is right</div>
+    <div class="exp-body">Limiting the planner to read and search tools enforces the planning boundary before action. Requiring a structured plan artifact supports review in GitHub, and a separate approved implementation step creates the human checkpoint required before code changes or command execution.</div>
+    <div class="exp-title">❌ Why the other options are wrong</div><ul class="distractor-list"><li><strong>A:</strong> Approval before merge is too late for this requirement because the agent can still edit files and execute commands before the plan is reviewed.</li><li><strong>D:</strong> Organization-level placement and visibility help distribution and access, but they do not prevent the planner from acting with edit and execute tools.</li><li><strong>C:</strong> CODEOWNERS and CI are valuable PR governance controls, but they evaluate changes after the planner has already modified code.</li></ul>
+    <div class="strategy-note">💡 For GH-600 plan-versus-act questions, favor answers that remove action capabilities from the planning agent and create a reviewable artifact before implementation begins.</div>
+    <div class="tags"><span class="tag">plan-act-boundary</span> <span class="tag">custom-agent-tools</span> <span class="tag">human-in-the-loop</span> <span class="tag">inspectable-artifacts</span></div>
+  </div>
+  </div>
+<div class="question" id="q4">
+    <div class="q-header">
+      <span class="q-num">Q4</span>
+      <span class="badge domain" style="background:#dbeafe">
+        Domain A: Prepare agent architecture and SDLC processes
+      </span>
+      <span class="badge type">sequence order</span>
+      <span class="badge diff" style="background:#fff8c5">very_hard</span>
+    </div>
+    
+    <p class="stem">A media streaming company is introducing Copilot cloud agent for dependency modernization work across a regulated monorepo. Architecture leaders want agents to move quickly, but they require planning to be separated from execution, all agent work to remain inspectable in GitHub, and deployment to remain gated by human approval. In which order should the team implement the workflow?</p>
+    <div class="scenario">The repository already uses GitHub Actions, CODEOWNERS, required status checks, and protected deployment environments. The team wants to avoid both unbounded autonomy and approval steps that do not reduce material risk.</div>
+    
+    <div class="options">
+      <div class="match-hint">Correct order:</div>
+      <div class="opt correct">
+          <span class="opt-id">1.</span>
+          <span>Define task inputs, expected artifacts, acceptance tests, ownership boundaries, and merge-readiness criteria.</span>
+        </div><div class="opt correct">
+          <span class="opt-id">2.</span>
+          <span>Have Copilot research the repository and produce a structured implementation plan before writing code.</span>
+        </div><div class="opt correct">
+          <span class="opt-id">3.</span>
+          <span>Have a responsible reviewer approve the plan and authorize Copilot to proceed with execution.</span>
+        </div><div class="opt correct">
+          <span class="opt-id">4.</span>
+          <span>Allow Copilot to implement changes on a branch and open a pull request containing the diff and rationale.</span>
+        </div><div class="opt correct">
+          <span class="opt-id">5.</span>
+          <span>Require CI, CODEOWNERS review, and protected-environment approval before merge or deployment.</span>
+        </div>
+    </div>
+    <div class="explanation">
+    <div class="exp-title">✅ Why the correct answer is right</div>
+    <div class="exp-body">The workflow first defines the agent task contract, then uses Copilot cloud agent for research and planning before code changes. A human approval checkpoint separates planning from execution. After Copilot creates the branch and pull request, standard GitHub governance evaluates the output through checks, CODEOWNERS review, and environment approval.</div>
+    <div class="exp-title">❌ Why the other options are wrong</div><ul class="distractor-list"><li><strong>A-before-D:</strong> Starting with implementation collapses planning and execution, making the agent's reasoning harder to inspect before code is written.</li><li><strong>C-before-A:</strong> Requiring CI and review before a pull request exists gives governance controls no concrete diff, artifact, or workflow run to evaluate.</li><li><strong>E-before-D:</strong> Approving execution before a structured plan exists turns the checkpoint into a generic approval rather than a meaningful risk control.</li><li><strong>D-before-B:</strong> Planning before defining inputs, outputs, and success criteria increases the chance that the plan optimizes for the wrong task boundary.</li></ul>
+    <div class="strategy-note">💡 For GH-600 sequence questions, order agent work as contract, plan, human checkpoint, action, then evaluation. If an option lets the agent act before an inspectable plan is approved, it is usually too early.</div>
+    <div class="tags"><span class="tag">plan-act-evaluate</span> <span class="tag">human-in-the-loop</span> <span class="tag">pr-governance</span> <span class="tag">structured-agent-tasks</span></div>
+  </div>
+  </div>
+<div class="question" id="q5">
+    <div class="q-header">
+      <span class="q-num">Q5</span>
+      <span class="badge domain" style="background:#dcfce7">
+        Domain C: Memory, state, and execution
+      </span>
+      <span class="badge type">single choice</span>
+      <span class="badge diff" style="background:#ffebe9">hard</span>
+    </div>
+    
+    <p class="stem">A retail engineering team uses Copilot cloud agent to continue a multi-week feature-flag migration after several interruptions. The agent previously learned that feature flags must be declared in one TypeScript file and mirrored in a YAML catalog, but several branches have changed since that fact was captured. What should the team configure or require to maintain continuity without using stale context?</p>
+    <div class="scenario">The team wants future Copilot code reviews to detect inconsistent feature-flag updates, but the migration checklist itself must resume from the last completed step in the active PR.</div>
+    
+    <div class="options">
+    <div class="opt ">
+        <span class="opt-id">A</span>
+        <span>Rely on Copilot Memory for the migration checklist, because repository memories remain available across agent sessions until manually deleted.</span>
+        
+      </div><div class="opt ">
+        <span class="opt-id">B</span>
+        <span>Move all state into an external vector database, and disable Copilot Memory to avoid branch citation validation delays.</span>
+        
+      </div><div class="opt correct">
+        <span class="opt-id">C</span>
+        <span>Store the flag convention as repository memory, keep migration checkpoints in the PR, and revalidate against branch HEAD before resuming.</span>
+        <span class="tick">✓</span>
+      </div><div class="opt ">
+        <span class="opt-id">D</span>
+        <span>Save both the convention and developer-specific decisions as user preferences, so code review can reuse them during later reviews.</span>
+        
+      </div>
+  </div>
+    <div class="explanation">
+    <div class="exp-title">✅ Why the correct answer is right</div>
+    <div class="exp-body">Repository-level Copilot Memory is appropriate for reusable repository facts such as coding conventions and project-specific rules, and Copilot validates repository facts against citations in the current branch before use. Task progress should be captured as a durable artifact, such as the PR description or comments, so the agent can resume from the latest checkpoint rather than relying on transient context.</div>
+    <div class="exp-title">❌ Why the other options are wrong</div><ul class="distractor-list"><li><strong>A:</strong> Copilot Memory is not the right place for step-by-step task progress, and unused facts or preferences can be deleted after 28 days rather than persisting until manual deletion.</li><li><strong>D:</strong> User-level preferences are tied to one user's later interactions, and Copilot code review uses repository-level facts only, not user-level preferences.</li><li><strong>B:</strong> An external store can be useful for some permanent memory needs, but replacing Copilot Memory removes built-in repository scoping and citation validation for repo facts.</li></ul>
+    <div class="strategy-note">💡 For GH-600 memory questions, separate durable task state from reusable repository knowledge. Checkpoints belong in GitHub artifacts; repository conventions belong in validated repository-level memory.</div>
+    <div class="tags"><span class="tag">copilot-memory</span> <span class="tag">state-persistence</span> <span class="tag">context-drift</span> <span class="tag">stale-context-prevention</span></div>
+  </div>
+  </div>
+<div class="question" id="q6">
+    <div class="q-header">
+      <span class="q-num">Q6</span>
+      <span class="badge domain" style="background:#ede9fe">
+        Domain B: MCP/tool use and environment permissions
+      </span>
+      <span class="badge type">code or config artifact</span>
+      <span class="badge diff" style="background:#ffebe9">hard</span>
+    </div>
+    
+    <p class="stem">A support engineering team creates a repository-level custom Copilot cloud agent to summarize GitHub issues and SupportHub tickets. The agent must read repository files and search SupportHub tickets, but it must not create or update tickets or modify source files. Based on the artifact, which change best satisfies the requirement?</p>
+    <div class="scenario">The SupportHub MCP server documentation lists three tools: `search_tickets`, `create_ticket`, and `update_ticket`. The token has already been provisioned as an Agents secret named `COPILOT_MCP_SUPPORTHUB_TOKEN`.</div>
+    <div class="artifact">
+      <div class="artifact-title">📄 .github/agents/support-triage.agent.md</div>
+      <pre><code>---
+name: support-triage
+description: Drafts issue summaries from repository files and SupportHub tickets.
+mcpServers:
+  supporthub:
+    type: http
+    url: https://supporthub.example.com/mcp
+    tools: [&quot;search_tickets&quot;, &quot;create_ticket&quot;, &quot;update_ticket&quot;]
+    headers:
+      Authorization: Bearer ${{ secrets.COPILOT_MCP_SUPPORTHUB_TOKEN }}
+---
+
+You summarize related GitHub issues and SupportHub tickets. Produce a Markdown summary only.</code></pre>
+    </div>
+    <div class="options">
+    <div class="opt ">
+        <span class="opt-id">A</span>
+        <span>Move the token to an Actions secret and omit `tools` so the default toolset is available.</span>
+        
+      </div><div class="opt ">
+        <span class="opt-id">B</span>
+        <span>Set SupportHub `tools` to `*` and rely on the MCP registry policy for tool restriction.</span>
+        
+      </div><div class="opt ">
+        <span class="opt-id">C</span>
+        <span>Keep the configuration and strengthen the prompt to instruct the agent not to call write tools.</span>
+        
+      </div><div class="opt correct">
+        <span class="opt-id">D</span>
+        <span>Use `mcp-servers`, keep only `search_tickets`, and set `tools` to `read`, `search`, and `supporthub/search_tickets`.</span>
+        <span class="tick">✓</span>
+      </div>
+  </div>
+    <div class="explanation">
+    <div class="exp-title">✅ Why the correct answer is right</div>
+    <div class="exp-body">Custom agent profiles use the `mcp-servers` frontmatter property. The MCP server configuration should expose only the required SupportHub tool, and the agent-level `tools` list should restrict the agent to read/search plus the specific namespaced MCP tool.</div>
+    <div class="exp-title">❌ Why the other options are wrong</div><ul class="distractor-list"><li><strong>C:</strong> Prompt instructions are not a permission boundary; the write-capable MCP tools would remain available to the agent.</li><li><strong>B:</strong> Using `*` enables all tools from the MCP server, including the write tools the scenario explicitly prohibits.</li><li><strong>A:</strong> Copilot cloud agent MCP configuration uses Agents secrets or variables with the required prefix, and omitting `tools` enables all available tools.</li></ul>
+    <div class="strategy-note">💡 On GH-600 configuration artifacts, check both syntax and effective permissions. A valid-looking prompt cannot compensate for an over-broad tool list.</div>
+    <div class="tags"><span class="tag">custom-agent-config</span> <span class="tag">mcp-server-tools</span> <span class="tag">agent-tool-scoping</span> <span class="tag">agents-secrets</span></div>
+  </div>
+  </div>
+<div class="question" id="q7">
+    <div class="q-header">
+      <span class="q-num">Q7</span>
+      <span class="badge domain" style="background:#dbeafe">
+        Domain A: Agent architecture and SDLC integration
+      </span>
+      <span class="badge type">code or config artifact</span>
+      <span class="badge diff" style="background:#ffebe9">hard</span>
+    </div>
+    
+    <p class="stem">A financial services team is creating a custom Copilot cloud agent to plan database migration work. Compliance requires the agent to inspect the repository and produce an auditable implementation plan, but no code changes, shell commands, or migration execution can occur until a maintainer approves the plan. Based on the agent profile, which change best satisfies the requirement?</p>
+    <div class="scenario">The team wants to keep delivery moving by using Copilot for repository analysis and planning, while enforcing a clear boundary between planning and implementation.</div>
+    <div class="artifact">
+      <div class="artifact-title">📄 .github/agents/migration-planner.agent.md</div>
+      <pre><code>---
+name: migration-planner
+description: Plans and implements database migration changes for platform services
+tools: [&quot;read&quot;, &quot;search&quot;, &quot;edit&quot;, &quot;execute&quot;, &quot;github/*&quot;]
+---
+
+You are responsible for translating approved issues into production-ready migration changes.
+
+For each assigned issue:
+1. Analyze the repository and create an implementation plan in the pull request description.
+2. Update migration code immediately after the plan is drafted.
+3. Run tests, commit changes, and request review.
+4. If requirements are unclear, choose the least disruptive implementation.</code></pre>
+    </div>
+    <div class="options">
+    <div class="opt ">
+        <span class="opt-id">A</span>
+        <span>Move the profile to .github-private and monitor session logs for changes made without approval.</span>
+        
+      </div><div class="opt ">
+        <span class="opt-id">B</span>
+        <span>Keep the tools and ask the agent to request maintainer approval in the PR description before merging.</span>
+        
+      </div><div class="opt correct">
+        <span class="opt-id">C</span>
+        <span>Limit tools to read/search and require a structured plan comment approved before a separate implementation assignment.</span>
+        <span class="tick">✓</span>
+      </div><div class="opt ">
+        <span class="opt-id">D</span>
+        <span>Remove execute but keep edit, then rely on branch protection and required reviews before merging.</span>
+        
+      </div>
+  </div>
+    <div class="explanation">
+    <div class="exp-title">✅ Why the correct answer is right</div>
+    <div class="exp-body">Limiting the planning agent to read/search removes code-edit and shell-execution capability during the planning phase, while the structured plan and approval checkpoint preserve the required Plan → Act boundary. GitHub custom agents allow specific tool lists, and the GH-600 study guide explicitly tests separating planning from execution, producing structured plans, validating plans, and preventing action until approval.</div>
+    <div class="exp-title">❌ Why the other options are wrong</div><ul class="distractor-list"><li><strong>B:</strong> A prompt-only approval instruction leaves edit and execute available, so the agent can still make changes before approval.</li><li><strong>D:</strong> Branch protection controls merge, not planning-time action; keeping edit still allows unapproved repository changes on the agent branch.</li><li><strong>A:</strong> Organization-wide placement improves reuse, and logs help audit, but monitoring after the fact does not prevent unapproved action.</li></ul>
+    <div class="strategy-note">💡 For GH-600 architecture questions, prefer designs that prevent risky agent actions through tool scope and workflow boundaries. Reviews and logs are important, but they are weaker than separating planning capability from implementation capability.</div>
+    <div class="tags"><span class="tag">plan-act-evaluate</span> <span class="tag">custom-agent-tool-scope</span> <span class="tag">human-in-the-loop</span> <span class="tag">structured-planning-artifacts</span></div>
+  </div>
+  </div>
+<div class="question" id="q8">
+    <div class="q-header">
+      <span class="q-num">Q8</span>
+      <span class="badge domain" style="background:#fef3c7">
+        Domain D: Evaluation, telemetry, error analysis, and tuning
+      </span>
+      <span class="badge type">code or config artifact</span>
+      <span class="badge diff" style="background:#ffebe9">hard</span>
+    </div>
+    
+    <p class="stem">A platform team pilots a custom Copilot cloud agent intended to create implementation plans before engineers start coding. After 18 sessions, evaluation shows low plan-to-diff adherence, frequent source changes before plan review, and repeated reviewer comments that the agent is acting like an implementation agent instead of a planner. Which change should you make first to tune the agent based on this evaluation?</p>
+    <div class="scenario">Session logs show the agent used shell commands to run migrations and modify application files. The team wants the next sprint's evaluation to measure structured plan quality, risk coverage, and reviewer rework rather than completed feature PRs.</div>
+    <div class="artifact">
+      <div class="artifact-title">📄 .github/agents/sprint-planner.agent.md</div>
+      <pre><code>---
+name: sprint-planner
+description: Creates sprint implementation plans and prepares code changes for backlog items
+tools: [&quot;*&quot;]
+---
+
+You are a sprint planning and implementation specialist.
+
+For each assigned issue:
+- Explore the repository and identify the likely files to change.
+- Create an implementation plan.
+- If the plan is straightforward, make the code changes in the same session.
+- Run available tests and linters.
+- Open or update a pull request when the work is ready.
+
+Preferred output:
+- Summary
+- Files changed
+- Test results
+- Follow-up work</code></pre>
+    </div>
+    <div class="options">
+    <div class="opt ">
+        <span class="opt-id">A</span>
+        <span>Switch to a stronger model and require reviewers to comment when the final PR diverges from the plan.</span>
+        
+      </div><div class="opt ">
+        <span class="opt-id">B</span>
+        <span>Keep the agent unchanged and add a dashboard for plan adherence, review iterations, and test pass rate.</span>
+        
+      </div><div class="opt correct">
+        <span class="opt-id">C</span>
+        <span>Restrict tools to read/search/edit and instruct it to write a structured plan artifact, excluding source edits.</span>
+        <span class="tick">✓</span>
+      </div><div class="opt ">
+        <span class="opt-id">D</span>
+        <span>Add a post-run CodeQL workflow and ask the agent to fix scan findings after it opens the PR.</span>
+        
+      </div>
+  </div>
+    <div class="explanation">
+    <div class="exp-title">✅ Why the correct answer is right</div>
+    <div class="exp-body">The evaluation indicates a behavior and tool-scope mismatch: the agent is supposed to plan but has broad tool access and instructions to implement. The best first tuning action is to narrow the tool set and revise the prompt so the agent produces an inspectable structured plan artifact instead of making source changes.</div>
+    <div class="exp-title">❌ Why the other options are wrong</div><ul class="distractor-list"><li><strong>B:</strong> A dashboard improves visibility but leaves the broad tool access and implementation-oriented instructions unchanged, so it does not address the root cause.</li><li><strong>A:</strong> A stronger model may improve reasoning quality, but the artifact already tells the agent to implement, so model choice is not the primary issue.</li><li><strong>D:</strong> CodeQL is useful for security evaluation, but post-run scanning does not correct the planner-versus-implementer role mismatch.</li></ul>
+    <div class="strategy-note">💡 For GH-600 tuning questions, map the failure signal to the smallest causal change: revise instructions and tool access when logs show the agent is using the wrong autonomy level.</div>
+    <div class="tags"><span class="tag">agent-evaluation-signals</span> <span class="tag">failure-root-cause-analysis</span> <span class="tag">tool-access-tuning</span> <span class="tag">custom-agent-instructions</span></div>
+  </div>
+  </div>
+<div class="question" id="q9">
+    <div class="q-header">
+      <span class="q-num">Q9</span>
+      <span class="badge domain" style="background:#e0f2fe">
+        Domain F: Guardrails, safety, accountability, and governance
+      </span>
+      <span class="badge type">code or config artifact</span>
+      <span class="badge diff" style="background:#ffebe9">hard</span>
+    </div>
+    
+    <p class="stem">An insurance company's platform team is enabling Copilot cloud agent for a repository that contains custom agent profiles and a setup workflow. An auditor says an agent must not be able to weaken its own instructions, runner setup, or tool restrictions without accountable human review, but application-code changes should still move quickly. Based on the CODEOWNERS artifact, which change best satisfies the requirement?</p>
+    <div class="scenario">The repository already requires one approving review before merge. The team wants a preventive control that applies to Copilot-created pull requests and human pull requests without adding approval gates to ordinary feature files.</div>
+    <div class="artifact">
+      <div class="artifact-title">📄 .github/CODEOWNERS</div>
+      <pre><code># Current CODEOWNERS
+src/payments/** @payments/app-reviewers
+src/policies/** @policies/app-reviewers
+.github/copilot-instructions.md @platform/ai-governance
+.github/workflows/deploy-production.yml @platform/release-governance
+</code></pre>
+    </div>
+    <div class="options">
+    <div class="opt ">
+        <span class="opt-id">A</span>
+        <span>Allow Copilot edits but add a weekly workflow that reports configuration changes.</span>
+        
+      </div><div class="opt ">
+        <span class="opt-id">B</span>
+        <span>Require signed commits and CodeQL status checks only on copilot/** branches.</span>
+        
+      </div><div class="opt ">
+        <span class="opt-id">C</span>
+        <span>Store custom-agent instructions in Actions secrets and load them during setup steps.</span>
+        
+      </div><div class="opt correct">
+        <span class="opt-id">D</span>
+        <span>Add CODEOWNERS for .github/agents/* and .github/workflows/copilot-setup-steps.yml, then require Code Owner review.</span>
+        <span class="tick">✓</span>
+      </div>
+  </div>
+    <div class="explanation">
+    <div class="exp-title">✅ Why the correct answer is right</div>
+    <div class="exp-body">Protecting custom agent profiles and the Copilot setup workflow with CODEOWNERS, combined with required Code Owner review, creates a preventive human checkpoint for changes that can alter agent behavior or execution context. GitHub guidance recommends protecting important Copilot and MCP configuration files with CODEOWNERS and enabling required Code Owner review.</div>
+    <div class="exp-title">❌ Why the other options are wrong</div><ul class="distractor-list"><li><strong>B:</strong> Signed commits and CodeQL checks improve traceability and security scanning, but they do not stop a pull request from changing agent configuration without the accountable reviewers.</li><li><strong>C:</strong> Moving instructions into Actions secrets reduces inspectability and is the wrong boundary; Copilot cloud agent is not intended to access GitHub Actions secrets in its sessions.</li><li><strong>A:</strong> A weekly report is a detective control after changes occur, not a preventive approval path for compliance-sensitive configuration changes.</li></ul>
+    <div class="strategy-note">💡 For GH-600 governance questions, prefer preventive controls that scope the risky artifact and preserve velocity elsewhere. Monitoring-only answers usually fail human-in-the-loop requirements.</div>
+    <div class="tags"><span class="tag">human-in-the-loop</span> <span class="tag">codeowners-protection</span> <span class="tag">agent-configuration-governance</span> <span class="tag">least-privilege</span></div>
+  </div>
+  </div>
+<div class="question" id="q10">
+    <div class="q-header">
+      <span class="q-num">Q10</span>
+      <span class="badge domain" style="background:#dbeafe">
+        Domain A: Prepare agent architecture and SDLC processes
+      </span>
+      <span class="badge type">sequence order</span>
+      <span class="badge diff" style="background:#fff8c5">very_hard</span>
+    </div>
+    <div class="cs-panel">
+    <div class="cs-header">📋 Case study — Case Study: NovaWorks Platform Engineering</div>
+    <p class="cs-intro">This is a case study. Case studies are not timed separately. You can use as much exam time as you would like to complete each case. However, there may be additional case studies and sections on this exam. You must manage your time to ensure that you are able to complete all questions included on this exam in the time provided. To answer the questions included in a case study, you will need to reference information that is provided in the case study. Each question is independent of the other questions in this case study.</p>
+    
+    <div class="cs-section">
+      <div class="cs-section-heading">Overview</div>
+      <div class="cs-section-body">NovaWorks is a SaaS company that maintains a large GitHub organization with 220 repositories. The platform engineering group is introducing GitHub Copilot cloud agent and custom agents to reduce backlog in maintenance, testing, and documentation work. The first rollout targets the phoenix-api repository, a TypeScript service that handles customer-facing APIs.</div>
+    </div>
+    <div class="cs-section">
+      <div class="cs-section-heading">Existing Environment</div>
+      <div class="cs-section-body">The organization uses GitHub Enterprise with Copilot enabled. The phoenix-api repository has a protected main branch, required status checks for build, unit-test, lint, and codeql, and CODEOWNERS for security-sensitive paths. The platform team has created an organization-level .github-private repository from GitHub's custom agents template. Agent profiles are intended to be available across the organization, while repository-specific runtime setup is managed in .github/workflows/copilot-setup-steps.yml. Copilot cloud agent sessions are tracked through the agents panel and session logs.</div>
+    </div>
+    <div class="cs-section">
+      <div class="cs-section-heading">Business Requirements</div>
+      <div class="cs-section-body">NovaWorks wants agents to handle dependency modernization, test coverage improvements, and low-risk refactoring. Product teams need faster delivery, but architecture leads want every non-trivial agent task to produce a plan that can be reviewed before implementation. The release team wants agent work to remain visible in normal GitHub workflows: issues, pull requests, comments, checks, reviews, and session logs.</div>
+    </div>
+    <div class="cs-section">
+      <div class="cs-section-heading">Technical Requirements</div>
+      <div class="cs-section-body">Custom agents must define clear inputs, expected outputs, and success criteria in their prompts. For tasks estimated above one hour, the agent must produce a structured implementation plan before modifying code. The plan must be stored as a GitHub artifact that reviewers can inspect without leaving the repository. The agent must not begin implementation until a human with write access approves the plan in GitHub. The setup workflow must be deterministic, use least-privilege permissions, and keep the required job name for Copilot setup steps.</div>
+    </div>
+    <div class="cs-section">
+      <div class="cs-section-heading">Security and Compliance Requirements</div>
+      <div class="cs-section-body">Changes to .github/workflows/copilot-setup-steps.yml, .github/copilot-instructions.md, .github/agents/*.agent.md, and CODEOWNERS require review by the platform-governance team. Copilot-authored pull requests must be reviewed like other contributions and must not be merged solely because the agent reports success. GitHub Actions workflows on Copilot pull requests should be run only after a human reviews the proposed changes, especially changes under .github/workflows/. The firewall should remain enabled unless an approved exception is documented.</div>
+    </div>
+  </div>
+    <p class="stem">A NovaWorks custom agent opens a pull request that changes application code and modifies .github/workflows/build.yml. GitHub Actions has not run automatically. In what order should the reviewer proceed?</p>
+    <div class="scenario">The repository follows the case study policy for Copilot pull requests and workflow-file changes.</div>
+    
+    <div class="options">
+      <div class="match-hint">Correct order:</div>
+      <div class="opt correct">
+          <span class="opt-id">1.</span>
+          <span>Inspect the PR diff, focusing on proposed workflow-file changes.</span>
+        </div><div class="opt correct">
+          <span class="opt-id">2.</span>
+          <span>Open the session log to inspect tools used and validation steps.</span>
+        </div><div class="opt correct">
+          <span class="opt-id">3.</span>
+          <span>Click Approve and run workflows for the Copilot pull request.</span>
+        </div><div class="opt correct">
+          <span class="opt-id">4.</span>
+          <span>Complete required human and CODEOWNERS review, then merge only after checks pass.</span>
+        </div>
+    </div>
+    <div class="explanation">
+    <div class="exp-title">✅ Why the correct answer is right</div>
+    <div class="exp-body">The reviewer should first inspect the pull request diff, especially workflow changes, then use the session log to understand the agent's tool use and validation. Only after becoming comfortable with the changes should the reviewer approve Actions workflows to run. Merge remains last and depends on required checks and human review.</div>
+    <div class="exp-title">❌ Why the other options are wrong</div><ul class="distractor-list"><li><strong>A:</strong> Merging before workflow approval and passing checks would bypass the validation and review gates required by the case study.</li><li><strong>B:</strong> Approving workflow execution before inspecting workflow-file changes risks running privileged automation prematurely.</li><li><strong>C:</strong> Session logs are valuable, but the PR diff should be inspected first because the workflow file itself changed.</li><li><strong>D:</strong> Diff inspection is the correct first step, but it does not replace session-log review, workflow approval, checks, and human review.</li></ul>
+    <div class="strategy-note">💡 For Copilot PR review sequence questions, inspect changes first, validate traceability next, run privileged checks only after review, and merge last.</div>
+    <div class="tags"><span class="tag">agent-output-review</span> <span class="tag">session-logs</span> <span class="tag">workflow-approval</span></div>
+  </div>
+  </div>
+
+  <!-- Answer Key -->
+  <div class="answer-key">
+    <h2>Quick Answer Key</h2>
+    <table>
+      <thead><tr><th>#</th><th>Type</th><th>Correct Answer</th></tr></thead>
+      <tbody><tr><td>Q1</td><td>single choice</td><td><strong>A</strong></td></tr><tr><td>Q2</td><td>code or config artifact</td><td><strong>B</strong></td></tr><tr><td>Q3</td><td>code or config artifact</td><td><strong>B</strong></td></tr><tr><td>Q4</td><td>sequence order</td><td><strong>B → D → E → A → C</strong></td></tr><tr><td>Q5</td><td>single choice</td><td><strong>C</strong></td></tr><tr><td>Q6</td><td>code or config artifact</td><td><strong>D</strong></td></tr><tr><td>Q7</td><td>code or config artifact</td><td><strong>C</strong></td></tr><tr><td>Q8</td><td>code or config artifact</td><td><strong>C</strong></td></tr><tr><td>Q9</td><td>code or config artifact</td><td><strong>D</strong></td></tr><tr><td>Q10</td><td>sequence order</td><td><strong>D → C → B → A</strong></td></tr></tbody>
+    </table>
+  </div>
+
+</body>
+</html>
