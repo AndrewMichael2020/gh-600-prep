@@ -287,6 +287,7 @@ function renderOptions(q) {
   const container = document.getElementById("optionsContainer");
   const selected = state.answers[q.id];
   const showResult = state.mode === "review" && state.answers[q.id] !== undefined;
+  container.innerHTML = q.options.map((opt) => {
     const isMulti = q.type === "multi_select";
     const isSelected = isMulti
       ? Array.isArray(selected) && selected.includes(opt.id)
@@ -357,6 +358,9 @@ function renderStructuredInteraction(q) {
     const pairs = state.answers[q.id]?.pairs ?? {};
     const choices = q.matchChoices ?? [];
     const showResult = state.mode === "review" && state.answers[q.id] !== undefined;
+    const correctPairs = (typeof q.correctAnswer === "object" && q.correctAnswer !== null && "pairs" in q.correctAnswer)
+      ? q.correctAnswer.pairs : {};
+    if (choices.length === 0) {
       return `<div class="structured-block">
         <p class="match-hint">Match each item to its value:</p>
         ${q.options.map((opt) => `
@@ -367,7 +371,6 @@ function renderStructuredInteraction(q) {
         `).join("")}
       </div>`;
     }
-
     return `<div class="structured-block">
       <p class="match-hint">Select the correct match for each item:</p>
       ${q.options.map((opt) => {
@@ -389,6 +392,9 @@ function renderStructuredInteraction(q) {
   if (q.type === "dropdown_completion") {
     const pairs = state.answers[q.id]?.pairs ?? {};
     const showResult = state.mode === "review" && state.answers[q.id] !== undefined;
+    const slots = q.slots ?? [];
+    const correctPairs = (typeof q.correctAnswer === "object" && q.correctAnswer !== null && "pairs" in q.correctAnswer)
+      ? q.correctAnswer.pairs : {};
     const template = q.statementTemplate ?? "";
 
     // Split template on {{slotN}} placeholders and interleave selects
