@@ -1,21 +1,32 @@
 import express from "express";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { generateExamPdf } from "./pdfExport.js";
 import { v4 as uuidv4 } from "uuid";
 
 const IS_DEV = process.env.NODE_ENV !== "production";
 
-function loadPublishedIds(): string[] | null {
-  if (IS_DEV) return null; // dev: show everything
-  const p = path.join(process.cwd(), "data", "published.json");
-  if (!existsSync(p)) return null;
+const PUBLISHED_PATH = path.join(process.cwd(), "data", "published.json");
+
+/** Always reads published.json; returns [] if missing/invalid. */
+function readPublishedIds(): string[] {
+  if (!existsSync(PUBLISHED_PATH)) return [];
   try {
-    const raw = JSON.parse(readFileSync(p, "utf8")) as { examIds?: string[] };
-    return Array.isArray(raw.examIds) ? raw.examIds : null;
-  } catch {
-    return null;
-  }
+    const raw = JSON.parse(readFileSync(PUBLISHED_PATH, "utf8")) as { examIds?: string[] };
+    return Array.isArray(raw.examIds) ? raw.examIds : [];
+  } catch { return []; }
+}
+
+/** Writes the published list to disk. */
+function writePublishedIds(ids: string[]): void {
+  writeFileSync(PUBLISHED_PATH, JSON.stringify({ examIds: ids }, null, 2) + "\n", "utf8");
+}
+
+/** For production filtering — returns null in dev (show all). */
+function loadPublishedIds(): string[] | null {
+  if (IS_DEV) return null;
+  const ids = readPublishedIds();
+  return ids.length ? ids : null;
 }
 
 import { assembleExam, createPlan, generateBatch, validateBatch } from "./generation.js";
@@ -55,11 +66,17 @@ app.get("/api/config", async (_req, res) => {
 
 // List stored exams (summary only — no questions).
 // In production returns only exams listed in data/published.json.
+// In dev, returns all exams with an `isPublished` flag on each.
 app.get("/api/exams", async (_req, res) => {
   const all = await listExams();
   const published = loadPublishedIds();
-  const exams = published ? all.filter((e) => published.includes(e.id)) : all;
-  return res.json(exams);
+  if (published) {
+    // Production: filter to published list only
+    return res.json(all.filter((e) => published.includes(e.id)));
+  }
+  // Dev: return all with isPublished flag
+  const publishedSet = new Set(readPublishedIds());
+  return res.json(all.map((e) => ({ ...e, isPublished: publishedSet.has(e.id) })));
 });
 
 const requestTracker = new Map<string, { count: number; resetAt: number }>();
@@ -143,7 +160,22 @@ app.get("/api/attempts/:id", async (req, res) => {
 // NOTE: /api/exams/generate must be registered BEFORE /api/exams/:id
 // to prevent Express matching "generate" as a dynamic :id parameter.
 
-// ── PDF generation (dev only) ─────────────────────────────────────────────────
+// ── Publish toggle (dev only) ─────────────────────────────────────────────────
+// POST /api/exams/:id/publish  { published: true|false }
+app.post("/api/exams/:id/publish", (req, res) => {
+  if (!IS_DEV) return res.status(403).json({ error: "Only available in dev mode." });
+  const { published } = req.body as { published?: boolean };
+  if (typeof published !== "boolean") return res.status(400).json({ error: "Body must be { published: true|false }" });
+  const ids = readPublishedIds();
+  const next = published
+    ? Array.from(new Set([...ids, req.params.id]))
+    : ids.filter((id) => id !== req.params.id);
+  writePublishedIds(next);
+  console.log(`[PUBLISH] exam ${req.params.id} → ${published ? "published" : "unpublished"} (total published: ${next.length})`);
+  return res.json({ ok: true, published, examId: req.params.id, totalPublished: next.length });
+});
+
+
 // GET  /api/exams/:id/pdf-status  → { exists: bool, url: string|null }
 // POST /api/exams/:id/pdf         → triggers Playwright PDF build; streams progress via SSE
 

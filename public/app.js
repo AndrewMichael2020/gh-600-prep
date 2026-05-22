@@ -74,6 +74,13 @@ async function renderExamList(exams, isDev = false) {
         month: "short", day: "numeric", year: "numeric",
       });
       const pdfStatus = pdfStatusMap[e.id] ?? { exists: false, url: null };
+      const publishBtn = isDev ? `
+        <button class="btn btn-outline btn-sm btn-publish${e.isPublished ? " is-published" : ""}"
+          data-exam-id="${escHtml(e.id)}" data-published="${e.isPublished ? "true" : "false"}"
+          title="${e.isPublished ? "Remove from production (currently visible to users)" : "Publish to production (make visible to users)"}">
+          ${e.isPublished ? "✅ Published" : "🔒 Unpublished"}
+        </button>
+      ` : "";
       const pdfButtons = isDev ? `
         <div class="exam-pdf-actions">
           <button class="btn btn-outline btn-sm btn-pdf-generate" data-exam-id="${escHtml(e.id)}" title="Generate Practice PDF (takes ~30s)">
@@ -95,6 +102,7 @@ async function renderExamList(exams, isDev = false) {
           <div class="exam-list-actions">
             <button class="btn btn-primary btn-sm" data-exam-id="${escHtml(e.id)}" data-exam-mode="exam">🎯 Exam</button>
             <button class="btn btn-secondary btn-sm" data-exam-id="${escHtml(e.id)}" data-exam-mode="review">📖 Practice</button>
+            ${publishBtn}
           </div>
           ${pdfButtons}
         </div>
@@ -112,6 +120,9 @@ async function renderExamList(exams, isDev = false) {
   if (isDev) {
     ul.querySelectorAll(".btn-pdf-generate").forEach((btn) => {
       btn.addEventListener("click", () => triggerPdfGeneration(btn.dataset.examId, btn));
+    });
+    ul.querySelectorAll(".btn-publish").forEach((btn) => {
+      btn.addEventListener("click", () => togglePublish(btn.dataset.examId, btn));
     });
   }
 }
@@ -171,7 +182,37 @@ async function triggerPdfGeneration(examId, triggerBtn) {
   }
 }
 
-// ── Domain distribution preview ─────────────────────────────────────
+// ── Publish toggle ───────────────────────────────────────────────────
+async function togglePublish(examId, btn) {
+  const isCurrentlyPublished = btn.dataset.published === "true";
+  const willPublish = !isCurrentlyPublished;
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`/api/exams/${examId}/publish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ published: willPublish }),
+    });
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error(text || `HTTP ${res.status}`); }
+    if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+
+    btn.dataset.published = willPublish ? "true" : "false";
+    btn.textContent = willPublish ? "✅ Published" : "🔒 Unpublished";
+    btn.title = willPublish
+      ? "Remove from production (currently visible to users)"
+      : "Publish to production (make visible to users)";
+    btn.classList.toggle("is-published", willPublish);
+  } catch (err) {
+    alert(`Failed to update publish status:\n${err.message}`);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+
 const DOMAIN_BASES = [
   { id: "A", name: "Agent architecture & SDLC", count: 17 },
   { id: "B", name: "MCP & permissions",          count: 21 },

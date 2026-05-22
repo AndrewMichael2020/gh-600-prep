@@ -489,6 +489,9 @@ h3 { font-size: .95rem; font-weight: 700; color: var(--color-muted); text-transf
 .exam-pdf-actions { display: flex; gap: .5rem; }
 .exam-pdf-actions .btn { font-size: .75rem; padding: .3rem .7rem; color: var(--color-muted); border-color: var(--color-border); }
 .exam-pdf-actions .btn:hover { color: var(--color-text); background: var(--color-surface); }
+.btn-publish { font-size: .8rem; }
+.btn-publish.is-published { color: #1a7f37; border-color: #1a7f37; background: #dafbe1; }
+.btn-publish.is-published:hover { background: #c8f0d4; }
 .btn-sm { padding: .4rem .9rem; font-size: .8rem; }
 .no-exams-msg {
   text-align: center; color: var(--color-muted); font-size: .9rem;
