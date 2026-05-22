@@ -63,13 +63,19 @@ function renderExamList(exams) {
           <span class="exam-list-date">${escHtml(date)}</span>
           <span class="exam-list-count">${e.questionCount} questions</span>
         </div>
-        <button class="btn btn-primary btn-sm" data-exam-id="${escHtml(e.id)}">Take Exam</button>
+        <div class="exam-list-actions">
+          <button class="btn btn-primary btn-sm" data-exam-id="${escHtml(e.id)}" data-exam-mode="exam">🎯 Exam</button>
+          <button class="btn btn-secondary btn-sm" data-exam-id="${escHtml(e.id)}" data-exam-mode="review">📖 Practice</button>
+        </div>
       </li>`;
     })
     .join("");
 
   ul.querySelectorAll("[data-exam-id]").forEach((btn) => {
-    btn.addEventListener("click", () => loadExam(btn.dataset.examId));
+    btn.addEventListener("click", () => {
+      state.mode = btn.dataset.examMode ?? "exam";
+      loadExam(btn.dataset.examId);
+    });
   });
 }
 
@@ -113,6 +119,8 @@ document.querySelectorAll("#modePills .pill").forEach((btn) => {
     document.querySelectorAll("#modePills .pill").forEach((p) => p.classList.remove("active"));
     btn.classList.add("active");
     state.mode = btn.dataset.mode;
+    document.getElementById("startBtn").textContent =
+      state.mode === "review" ? "Generate & Practice" : "Generate Exam";
   });
 });
 
@@ -122,7 +130,8 @@ document.getElementById("startBtn").addEventListener("click", startGeneration);
 function startGeneration() {
   showView("view-loading");
   document.getElementById("loadingBar").style.width = "0%";
-  document.getElementById("loadingStatus").textContent = "Building exam blueprint…";
+  document.getElementById("loadingStatus").textContent =
+    state.mode === "review" ? "Building practice blueprint…" : "Building exam blueprint…";
   document.getElementById("loadingDetail").textContent = "";
   document.getElementById("batchLog").innerHTML = "";
 
@@ -165,7 +174,8 @@ function startGeneration() {
     if (data.type === "complete") {
       es.close();
       document.getElementById("loadingBar").style.width = "100%";
-      document.getElementById("loadingStatus").textContent = "Exam ready!";
+      document.getElementById("loadingStatus").textContent =
+        state.mode === "review" ? "Practice session ready!" : "Exam ready!";
       state.exam = data.exam;
       state.currentIndex = 0;
       state.answers = {};

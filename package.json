@@ -6,8 +6,8 @@
   "scripts": {
     "test": "vitest run",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/server.js",
-    "dev": "tsx src/server.ts",
+    "dev": "tsx --env-file=.env src/server.ts",
+    "start": "node --env-file=.env dist/server.js",
     "generate": "tsx --env-file=.env scripts/generate.ts",
     "fetch-knowledge": "tsx scripts/fetch-knowledge.ts"
   },

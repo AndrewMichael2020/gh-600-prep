@@ -2,9 +2,6 @@ import express from "express";
 import path from "node:path";
 import { v4 as uuidv4 } from "uuid";
 
-// Load .env in dev (Node 20+ built-in; silently skipped if file absent)
-try { (process as unknown as { loadEnvFile: (f: string) => void }).loadEnvFile(".env"); } catch { /* no .env */ }
-
 import { assembleExam, createPlan, generateBatch, validateBatch } from "./generation.js";
 import { getAttempt, getExam, listExams, saveAttempt, saveExam } from "./persistence.js";
 import { scoreAttempt } from "./scoring.js";
