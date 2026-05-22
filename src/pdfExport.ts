@@ -289,12 +289,19 @@ function buildHtml(exam: ExamSet): string {  const date = new Date(exam.createdA
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
-export async function generateExamPdf(exam: ExamSet): Promise<string> {
-  const examsDir = path.join(process.cwd(), "data/exams");
-  const tmpHtml = path.join(examsDir, `${exam.id}.html`);
-  const outPath = path.join(examsDir, `${exam.id}.pdf`);
+/** Returns a human-readable filename stem for an exam, e.g. `gh-600-2026-05-22-100q-a1ac29d0`. */
+export function examPdfStem(exam: Pick<ExamSet, "id" | "createdAt" | "questions">): string {
+  const date = new Date(exam.createdAt).toISOString().slice(0, 10); // YYYY-MM-DD
+  return `gh-600-${date}-${exam.questions.length}q-${exam.id.slice(0, 8)}`;
+}
 
-  console.log(`[PDF] Building PDF for exam ${exam.id} (${exam.questions.length} questions)…`);
+export async function generateExamPdf(exam: ExamSet): Promise<{ outPath: string; filename: string }> {
+  const examsDir = path.join(process.cwd(), "data/exams");
+  const stem = examPdfStem(exam);
+  const tmpHtml = path.join(examsDir, `${stem}.html`);
+  const outPath = path.join(examsDir, `${stem}.pdf`);
+
+  console.log(`[PDF] Building PDF for exam ${exam.id} → ${stem}.pdf (${exam.questions.length} questions)…`);
 
   const html = buildHtml(exam);
   fs.writeFileSync(tmpHtml, html, "utf8");
@@ -312,8 +319,8 @@ export async function generateExamPdf(exam: ExamSet): Promise<string> {
     console.log(`[PDF] Saved → ${outPath}`);
   } finally {
     await browser.close();
-    fs.unlinkSync(tmpHtml);
+    if (fs.existsSync(tmpHtml)) fs.unlinkSync(tmpHtml);
   }
 
-  return outPath;
+  return { outPath, filename: `${stem}.pdf` };
 }

@@ -27,7 +27,7 @@ async function main() {
   if (!exam) throw new Error(`Exam not found: ${targetId}`);
 
   console.log(`Exporting exam ${exam.id} (${exam.questions.length} questions)…`);
-  const outPath = await generateExamPdf(exam);
+  const { outPath } = await generateExamPdf(exam);
   console.log(`✅  PDF saved → ${outPath}`);
 }
 

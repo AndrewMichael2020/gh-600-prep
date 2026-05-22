@@ -176,13 +176,17 @@ app.post("/api/exams/:id/publish", (req, res) => {
 });
 
 
-// GET  /api/exams/:id/pdf-status  → { exists: bool, url: string|null }
-// POST /api/exams/:id/pdf         → triggers Playwright PDF build; streams progress via SSE
+// GET  /api/exams/:id/pdf-status  → { exists: bool, url: string|null, filename: string|null }
+// POST /api/exams/:id/pdf         → triggers Playwright PDF build
 
-app.get("/api/exams/:id/pdf-status", (req, res) => {
-  const pdfPath = path.join(process.cwd(), "data/exams", `${req.params.id}.pdf`);
+app.get("/api/exams/:id/pdf-status", async (req, res) => {
+  const exam = await getExam(req.params.id);
+  if (!exam) return res.status(404).json({ error: "Exam not found" });
+  const { examPdfStem } = await import("./pdfExport.js");
+  const stem = examPdfStem(exam);
+  const pdfPath = path.join(process.cwd(), "data/exams", `${stem}.pdf`);
   const exists = existsSync(pdfPath);
-  return res.json({ exists, url: exists ? `/exams/${req.params.id}.pdf` : null });
+  return res.json({ exists, url: exists ? `/exams/${stem}.pdf` : null, filename: exists ? `${stem}.pdf` : null });
 });
 
 app.post("/api/exams/:id/pdf", async (req, res) => {
@@ -193,8 +197,8 @@ app.post("/api/exams/:id/pdf", async (req, res) => {
   if (!exam) return res.status(404).json({ error: "Exam not found" });
 
   try {
-    const outPath = await generateExamPdf(exam);
-    return res.json({ ok: true, url: `/exams/${examId}.pdf`, path: outPath });
+    const { outPath, filename } = await generateExamPdf(exam);
+    return res.json({ ok: true, url: `/exams/${filename}`, filename, path: outPath });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[PDF] Generation failed:", msg);
