@@ -108,11 +108,11 @@ curl -fsS "${SERVICE_URL}/" > /dev/null     # → 200 app shell
 
 ## Production readiness checklist
 
-- [ ] `npm test` passes (13/13)
-- [ ] `npm run build` passes (clean tsc)
-- [ ] At least one exam in `data/published.json`
-- [ ] `scripts/gcp-setup.sh` has been run (GitHub secrets set)
-- [ ] `npm audit` shows 0 vulnerabilities
+- [x] `npm test` passes (13/13)
+- [x] `npm run build` passes (clean tsc)
+- [x] At least one exam in `data/published.json`
+- [x] `scripts/gcp-setup.sh` has been run (GitHub secrets set)
+- [x] `npm audit` shows 0 vulnerabilities
 - [ ] `/healthz` returns `{"ok":true}` at deployed URL
 - [ ] Home page lists published exam(s)
 - [ ] `OPENAI_API_KEY` only reachable server-side (verify: browser DevTools → Network, no key in responses)
