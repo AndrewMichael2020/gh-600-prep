@@ -113,11 +113,19 @@ Every question must satisfy all five criteria:
 
 ---
 
-## Anti-Bias Rules (enforced automatically)
+## Anti-Bias Rules (STRICTLY ENFORCED)
 
 - **Answer position**: CRITICAL — place the correct answer at position {{CORRECT_ANSWER_TARGETS}} for this batch. Do NOT default to A or C. Deliberately vary which letter is correct across the questions in this batch.
-- **Length parity**: Keep all options within 20 words of each other. Longest option must not be correct more than 30% of the time.
-- **No absolutes**: Avoid "always"/"never" -- these are giveaway tells.
+
+- **Length anti-bias (CRITICAL — this is the most common generation failure)**:
+  LLMs naturally write longer correct answers (more justification, more qualifiers) and shorter distractors. You must actively counteract this:
+  1. **Shortest or second-shortest option must be correct in at least 50% of questions in this batch.** Aim for 60%.
+  2. **Longest option must be correct in at most 10% of questions in this batch.** If you notice the longest option is correct, rewrite it: trim the correct answer to its essential claim, or add a relevant specific detail to one of the shorter distractors to equalize length.
+  3. **Writing technique**: Express the correct answer as a single precise action or configuration. Do not pad it with rationale. Put rationale in `explanation.whyCorrect` instead. Distractors may be equally long — length alone must never be a signal.
+  4. Before finalising each question, ask yourself: *"Is my correct answer the longest option? If yes, can I trim it or expand a distractor?"*
+
+- **Option length**: Keep all four options within 20 words of each other. Rewrite any option that is more than 20 words longer than the shortest option.
+- **No absolutes**: Avoid "always"/"never" unless objectively true — these are giveaway tells.
 - **No obvious wrong**: Every distractor must be a real choice a practitioner could make.
 
 ---
