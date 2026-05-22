@@ -113,30 +113,29 @@ async function generateWithOpenAI(
   const client = new OpenAI({ apiKey: config.openaiApiKey });
   const { system, user } = buildGenerationPrompt(plan, batch, existingQuestionStems);
 
-  // gpt-5.5 and o-series models use the Responses API with reasoning support.
-  // Standard gpt-4o/gpt-4o-mini use chat completions. Detect by model name.
   const isReasoningModel = /^o\d|^gpt-5/.test(config.model);
+  console.log(`[GEN] model=${config.model} isReasoningModel=${isReasoningModel} effort=${config.reasoningEffort}`);
 
   let text: string | undefined;
 
   if (isReasoningModel) {
     const params: Parameters<typeof client.responses.create>[0] = {
       model: config.model,
-      // NOTE: web_search_preview is incompatible with json_object format mode.
-      // The system prompt instructs the model to output only valid JSON, which is sufficient.
       input: [
         { type: "message" as const, role: "system" as const, content: system },
         { type: "message" as const, role: "user" as const, content: user },
       ],
-      // Web search lets the model look up the latest GitHub/Microsoft docs while generating
       tools: [{ type: "web_search_preview" as const }],
     };
     if (config.reasoningEffort && config.reasoningEffort !== "none") {
       params.reasoning = { effort: config.reasoningEffort as "low" | "medium" | "high" };
     }
+    console.log(`[GEN] Calling responses.create…`);
     const res = await client.responses.create(params);
     text = (res as unknown as { output_text?: string }).output_text?.trim();
+    console.log(`[GEN] responses.create returned — output_text length=${text?.length ?? 0}`);
   } else {
+    console.log(`[GEN] Calling chat.completions.create…`);
     const res = await client.chat.completions.create({
       model: config.model,
       response_format: { type: "json_object" },
@@ -147,6 +146,7 @@ async function generateWithOpenAI(
       temperature: 0.8,
     });
     text = res.choices[0]?.message?.content?.trim();
+    console.log(`[GEN] chat.completions returned — content length=${text?.length ?? 0}`);
   }
 
   if (!text) throw new Error("OpenAI returned empty response");
@@ -158,11 +158,22 @@ async function generateWithOpenAI(
   const jsonStart = text.indexOf("{");
   const jsonEnd = text.lastIndexOf("}");
   if (jsonStart > 0 && jsonEnd > jsonStart) {
+    console.log(`[GEN] Trimming ${jsonStart} leading chars before JSON`);
     text = text.slice(jsonStart, jsonEnd + 1);
   }
 
-  const parsed = JSON.parse(text) as { questions?: PracticeQuestion[]; caseStudy?: CaseStudy };
-  if (!Array.isArray(parsed.questions)) throw new Error("OpenAI response missing questions array");
+  let parsed: { questions?: PracticeQuestion[]; caseStudy?: CaseStudy };
+  try {
+    parsed = JSON.parse(text) as { questions?: PracticeQuestion[]; caseStudy?: CaseStudy };
+  } catch (e) {
+    console.error(`[GEN] JSON.parse failed. First 500 chars of response:\n${text.slice(0, 500)}`);
+    throw new Error(`Failed to parse OpenAI JSON response: ${e instanceof Error ? e.message : e}`);
+  }
+  if (!Array.isArray(parsed.questions)) {
+    console.error(`[GEN] Missing questions array. Keys in response: ${Object.keys(parsed).join(", ")}`);
+    throw new Error("OpenAI response missing questions array");
+  }
+  console.log(`[GEN] Parsed ${parsed.questions.length} questions successfully`);
 
   const mapped = parsed.questions.map((q) => ({
     ...q,

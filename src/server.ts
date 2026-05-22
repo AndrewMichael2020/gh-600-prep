@@ -129,22 +129,35 @@ app.get("/api/exams/generate", async (req, res) => {
   res.flushHeaders();
 
   let closed = false;
-  req.on("close", () => { closed = true; });
+  req.on("close", () => {
+    closed = true;
+    console.log(`[SSE] Client disconnected (questionCount=${questionCount})`);
+  });
+
+  // Keepalive: send SSE comment every 15 s so proxies/browsers don't drop the idle connection
+  // during long OpenAI calls (case_study batches can take 60–90 s).
+  const keepAlive = setInterval(() => {
+    if (!closed) res.write(": keepalive\n\n");
+  }, 15_000);
 
   const send = (data: object) => {
     if (!closed) res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
 
+  console.log(`[SSE] Generation started — questionCount=${questionCount}`);
+
   try {
     const plan = createPlan(questionCount);
+    console.log(`[SSE] Plan created — ${plan.batches.length} batches, ${plan.totalQuestions} questions`);
     send({ type: "plan", totalBatches: plan.batches.length, totalQuestions: plan.totalQuestions });
 
     const allQuestions: ReturnType<typeof validateBatch> = [];
     const allCaseStudies: import("./types.js").CaseStudy[] = [];
 
     for (let i = 0; i < plan.batches.length; i++) {
-      if (closed) break;
+      if (closed) { console.log(`[SSE] Aborted at batch ${i} — client closed`); break; }
       const batch = plan.batches[i];
+      console.log(`[SSE] Batch ${i + 1}/${plan.batches.length} starting — domain=${batch.domainId ?? "mixed"} type=${batch.typeFocus.join(",")} count=${batch.questionCount}`);
       send({
         type: "batch_start",
         index: i,
@@ -160,10 +173,12 @@ app.get("/api/exams/generate", async (req, res) => {
         batch,
         allQuestions.map((q) => q.stem)
       );
+      console.log(`[SSE] Batch ${i + 1} raw=${generated.length} questions received`);
       if (caseStudy) allCaseStudies.push(caseStudy);
       const validated = validateBatch(generated);
       const accepted = validated.filter((q) => q.metadata.validationStatus !== "rejected");
       allQuestions.push(...accepted);
+      console.log(`[SSE] Batch ${i + 1} accepted=${accepted.length} running_total=${allQuestions.length}`);
 
       send({ type: "batch_done", index: i, accepted: accepted.length, running: allQuestions.length });
     }
@@ -174,10 +189,14 @@ app.get("/api/exams/generate", async (req, res) => {
       allCaseStudies
     );
     await saveExam(exam);
+    console.log(`[SSE] Exam assembled — id=${exam.id} questions=${exam.questions.length}`);
     send({ type: "complete", examId: exam.id, exam });
   } catch (err) {
-    send({ type: "error", message: err instanceof Error ? err.message : "Generation failed" });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[SSE] Generation error:`, err);
+    send({ type: "error", message: msg });
   } finally {
+    clearInterval(keepAlive);
     res.end();
   }
 });
@@ -240,4 +259,5 @@ app.get("/api/exports/attempt/:attemptId", async (req, res) => {
 const port = Number(process.env.PORT || 3000);
 app.listen(port, () => {
   console.log(`GH-600 prep app running on http://localhost:${port}`);
+  console.log(`[CONFIG] model=${process.env.OPENAI_MODEL ?? "gpt-5.5"} hasApiKey=${Boolean(process.env.OPENAI_API_KEY)} effort=${process.env.OPENAI_REASONING_EFFORT ?? "medium"}`);
 });
