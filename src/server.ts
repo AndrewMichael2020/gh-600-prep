@@ -176,6 +176,7 @@ app.get("/api/exams/generate", async (req, res) => {
 
     const allQuestions: ReturnType<typeof validateBatch> = [];
     const allCaseStudies: import("./types.js").CaseStudy[] = [];
+    const usedCaseStudyThemes: string[] = [];
 
     for (let i = 0; i < plan.batches.length; i++) {
       if (closed) { console.log(`[SSE] Aborted at batch ${i} — client closed`); break; }
@@ -194,10 +195,18 @@ app.get("/api/exams/generate", async (req, res) => {
       const { questions: generated, caseStudy } = await generateBatch(
         plan,
         batch,
-        allQuestions.map((q) => q.stem)
+        allQuestions.map((q) => q.stem),
+        usedCaseStudyThemes
       );
       console.log(`[SSE] Batch ${i + 1} raw=${generated.length} questions received`);
-      if (caseStudy) allCaseStudies.push(caseStudy);
+      if (caseStudy) {
+        allCaseStudies.push(caseStudy);
+        // Record title + overview snippet so subsequent case-study batches avoid repeating the theme
+        const overview = caseStudy.sections?.find((s: { heading: string }) => s.heading === "Overview");
+        usedCaseStudyThemes.push(
+          `${caseStudy.title}: ${(overview as { body?: string } | undefined)?.body?.slice(0, 150) ?? ""}`
+        );
+      }
       const validated = validateBatch(generated);
       const accepted = validated.filter((q) => q.metadata.validationStatus !== "rejected");
       allQuestions.push(...accepted);

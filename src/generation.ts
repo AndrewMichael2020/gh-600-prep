@@ -63,7 +63,8 @@ function pick<T>(arr: T[], i: number): T {
 function buildGenerationPrompt(
   plan: GenerationPlan,
   batch: BatchPlan,
-  existingStems: string[]
+  existingStems: string[],
+  usedCaseStudyThemes: string[] = []
 ): { system: string; user: string } {
   const domainId = batch.domainId ?? "A";
   const domainName = batch.domainName ?? domainMap[domainId] ?? "General";
@@ -77,6 +78,11 @@ function buildGenerationPrompt(
           .map((s) => `- ${s.slice(0, 100)}`)
           .join("\n")
       : "(none)";
+
+  const avoidThemes =
+    usedCaseStudyThemes.length > 0
+      ? usedCaseStudyThemes.map((t) => `- ${t}`).join("\n")
+      : "(none — this is the first case study)";
 
   // Target distribution hint: cycle A/B/C/D so correct answers spread evenly
   const targets = ["A", "B", "C", "D"];
@@ -98,6 +104,7 @@ function buildGenerationPrompt(
     .replace(/\{\{CASE_STUDY_ID\}\}/g, batch.caseStudyId ?? "null")
     .replace(/\{\{CORRECT_ANSWER_TARGETS\}\}/g, targetHint)
     .replace(/\{\{AVOID_STEMS\}\}/g, avoidList)
+    .replace(/\{\{AVOID_CASE_STUDY_THEMES\}\}/g, avoidThemes)
     .replace(/\{\{TIMESTAMP\}\}/g, new Date().toISOString())
     .replace(/\{\{MODEL\}\}/g, config.model)
     .replace(/\{\{REASONING_EFFORT\}\}/g, config.reasoningEffort);
@@ -108,10 +115,11 @@ function buildGenerationPrompt(
 async function generateWithOpenAI(
   plan: GenerationPlan,
   batch: BatchPlan,
-  existingQuestionStems: string[]
+  existingQuestionStems: string[],
+  usedCaseStudyThemes: string[] = []
 ): Promise<{ questions: PracticeQuestion[]; caseStudy?: CaseStudy }> {
   const client = new OpenAI({ apiKey: config.openaiApiKey });
-  const { system, user } = buildGenerationPrompt(plan, batch, existingQuestionStems);
+  const { system, user } = buildGenerationPrompt(plan, batch, existingQuestionStems, usedCaseStudyThemes);
 
   const isReasoningModel = /^o\d|^gpt-5/.test(config.model);
   console.log(`[GEN] model=${config.model} isReasoningModel=${isReasoningModel} effort=${config.reasoningEffort}`);
@@ -193,14 +201,15 @@ async function generateWithOpenAI(
 export async function generateBatch(
   plan: GenerationPlan,
   batch: BatchPlan,
-  existingQuestionStems: string[]
+  existingQuestionStems: string[],
+  usedCaseStudyThemes: string[] = []
 ): Promise<{ questions: PracticeQuestion[]; caseStudy?: CaseStudy }> {
   if (!config.openaiApiKey) {
     throw new Error(
       "OpenAI API key not configured. Run `npm run generate` to pre-generate exams in dev mode."
     );
   }
-  return generateWithOpenAI(plan, batch, existingQuestionStems);
+  return generateWithOpenAI(plan, batch, existingQuestionStems, usedCaseStudyThemes);
 }
 
 /**

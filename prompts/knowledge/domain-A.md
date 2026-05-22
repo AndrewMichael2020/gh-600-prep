@@ -3,6 +3,19 @@ Source: https://docs.github.com/en/copilot/how-tos/administer-copilot/manage-for
 Source: https://learn.microsoft.com/en-us/training/modules/foundations-agentic-ai/
 Source: https://learn.microsoft.com/en-us/training/modules/design-agent-architecture-integration/
 
+## Scope Boundaries — what this domain DOES and DOES NOT cover
+
+**Domain A covers**: agent lifecycle design, SDLC integration patterns, planning vs action separation,
+structured task definition (inputs/outputs/success criteria), observability for autonomous agents,
+contributor model, PR-based governance *as part of agent workflow setup*.
+
+**Do NOT classify as Domain A** (see other domains):
+- Firewall rules, network allowlists, runner network config → **Domain B**
+- MCP server permissions, tool scoping, OAuth → **Domain B**
+- CI failures, telemetry gaps, evaluation metrics → **Domain D**
+- Human-approval guardrails, content filters, compliance audits → **Domain F**
+- PR review / CODEOWNERS *in a governance/compliance context* → **Domain F**
+
 ## Official Study Guide Objectives
 
 ### Integrate agents into the software development lifecycle (SDLC)
@@ -66,6 +79,14 @@ A well-defined agent task has:
 - Agents defined in `.github/agents/*.agent.md`
 - Format: YAML front matter (name, description, tools) + markdown system prompt
 - Internal or private visibility controls who can use agents
+
+### Agent front-matter: `disable-model-invocation` (replaces deprecated `infer`)
+- **Current field**: `disable-model-invocation: true` prevents the agent from calling the LLM
+  and is used to create tool-only or orchestrator agents.
+- **Deprecated**: `infer: false` was an earlier SDK-era field with equivalent effect.
+  Do NOT write questions that present `infer: false` as the recommended current syntax;
+  use `disable-model-invocation` in any answer key or explanation.
+- Source: GitHub Copilot custom agent docs and Extensions SDK changelog
 
 ### Copilot cloud agent execution environment
 - Runs on GitHub Actions runners (fresh VM per session; ephemeral)

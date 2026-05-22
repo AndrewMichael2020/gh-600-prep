@@ -128,6 +128,51 @@ Every question must satisfy all five criteria:
 
 ---
 
+## Domain Assignment Rules (CRITICAL — do not mislabel)
+
+When setting `domainId` on a question, use the **primary technical concern**, not the scenario wrapper:
+
+| Topic | Correct domain |
+|---|---|
+| Network firewall, allowlist, outbound rules, runner network | **B** |
+| MCP server config, tool permissions, OAuth, PAT scopes | **B** |
+| CI not running, telemetry missing, evaluation metric, trace | **D** |
+| Human approval gate, guardrail policy, content filter, audit log | **F** |
+| Guardrails in governance/compliance context | **F** |
+| PR review, CODEOWNERS, branch protection **for governance/compliance** | **F** |
+| PR review, CODEOWNERS, branch protection **for SDLC agent workflow setup** | **A** |
+| Inputs/outputs/success criteria, planning vs action, agent lifecycle | **A** |
+| Memory persistence, context window, state handoff | **C** |
+| Weak-domain drill, scoring, performance evaluation | **D** |
+| Sub-agent events, orchestrator conflict, parallel agents | **E** |
+
+**Never label a question Domain A just because a GitHub workflow or Copilot feature appears in the scenario.**
+The domain is determined by the *skill being tested*, not the config file shown.
+
+---
+
+## Case Study Themes Already Used (do NOT repeat or closely echo)
+
+{{AVOID_CASE_STUDY_THEMES}}
+
+When writing a new case study, choose a **distinct company type, problem space, and primary domain concern** from all themes listed above.
+
+Overused themes to avoid regardless of prior list:
+- define inputs, outputs, success criteria
+- plan before action / structured plan output
+- human approval before high-risk work
+- PR review, CODEOWNERS, branch protection
+- avoid unbounded autonomy
+
+Instead, prefer under-represented angles:
+- MCP server misconfiguration or OAuth failure (Domain B)
+- Evaluation metric drift or telemetry gap discovery (Domain D)
+- Memory/context loss across sessions (Domain C)
+- Multi-agent conflict or dependency deadlock (Domain E)
+- Guardrail bypass or content filter tuning (Domain F)
+
+---
+
 ## Worked Examples (quality bar -- do not reproduce)
 
 ### Example A -- single_choice, Domain B, hard

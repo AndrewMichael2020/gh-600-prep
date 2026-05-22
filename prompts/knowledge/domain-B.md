@@ -2,6 +2,17 @@
 Source: https://docs.github.com/en/copilot/how-tos/copilot-sdk/use-copilot-sdk/custom-agents
 Source: https://learn.microsoft.com/en-us/training/modules/agent-tooling-mcp-execution-environments/
 
+## Scope — what belongs in Domain B
+This is the **largest domain** and covers any question whose primary skill is:
+- selecting, configuring, or restricting agent tools
+- MCP server setup, authentication, allow-lists, or registries
+- execution environment constraints (network, secrets, file scope)
+- error handling, retries, rollback, escalation inside the execution path
+
+**Firewall / network allowlist questions belong here**, not in Domain A.
+The cloud agent runner's outbound network rules, domain allowlists, and proxy
+settings are an *execution environment* concern, not an SDLC design concern.
+
 ## Official Study Guide Objectives
 
 ### Select and configure agent tools
@@ -57,6 +68,17 @@ tools: null  # or omit tools property
 - **MCP allow lists**: Organization-level control; admins configure which MCP servers agents can use
 - Each custom agent can have its own `mcpServers` config section
 - MCP servers run as separate processes; agent communicates via JSON-RPC
+
+### MCP authentication — current patterns
+- **Remote HTTP/SSE MCP servers**: authenticate via `Authorization: Bearer <token>` header.
+  The token is typically a GitHub PAT stored as an **agent secret** (not a GitHub Actions secret —
+  agents cannot read Actions secrets).
+- **Secret naming**: agent secrets follow the same `SCREAMING_SNAKE_CASE` convention but are
+  managed separately from Actions secrets in the repository or org settings for agents.
+- **OAuth flows**: GitHub's remote MCP server supports OAuth; the cloud agent handles the
+  browser consent redirect automatically when the MCP server returns a `401` with `WWW-Authenticate`.
+- **Least privilege for PATs**: MCP server PATs should be fine-grained with only the repo scopes
+  needed (e.g., `contents: read`, `pull_requests: write`); avoid classic tokens with broad `repo` scope.
 
 ### Configuring a GitHub remote MCP server
 ```yaml
