@@ -1,6 +1,6 @@
 # GitHub Certified: Agentic AI Developer (GH-600) — Work Status
 
-> **For the next developer.** This file tracks what is done, what is not, and the key decisions made along the way. Read `APP_PLAN.md` for the original spec; read `README.md` for how to run the app.
+> **For the next developer.** This file tracks what is done, what is not, and the key decisions made along the way. Read `APP_PLAN.md` for the original spec; read `README.md` for how to run the app; read `CLOUD_RUN_DEPLOYMENT_RUNBOOK.md` for deployment operations.
 
 Last updated: 2026-05-22 (UTC)
 
@@ -8,7 +8,7 @@ Last updated: 2026-05-22 (UTC)
 
 ## Current status
 
-**All planned phases complete.** The app generates, stores, and serves GH-600-style practice exams in a polished single-page UI. Dev-mode features (live generation, publish toggle, PDF export) are fully wired. The only remaining work is a production Cloud Run deployment.
+**App complete. CI/CD pipeline wired. GCP infrastructure scripted — one `gcp-setup.sh` run away from first deploy.**
 
 | Layer | State |
 |-------|-------|
@@ -16,12 +16,16 @@ Last updated: 2026-05-22 (UTC)
 | Exam + Practice UI | ✅ Complete |
 | Scoring, review, analytics | ✅ Complete |
 | Anti-bias enforcement | ✅ Complete |
-| PDF export (UI + CLI) | ✅ Complete |
+| PDF export (UI + CLI + GCS upload) | ✅ Complete |
 | Publish/unpublish toggle | ✅ Complete |
 | Domain distribution (close to official weights) | ✅ Complete |
 | Case-study theme anti-repetition | ✅ Complete |
 | Dockerfile + `.dockerignore` | ✅ Complete |
-| Cloud Run deployment | 🔲 Not yet done |
+| GCS bucket for PDF storage | ✅ Complete (`src/storage.ts`) |
+| CI/CD — GitHub Actions workflow | ✅ Complete (`.github/workflows/ci.yml`) |
+| One-shot GCP infra setup script | ✅ Complete (`scripts/gcp-setup.sh`) |
+| Security audit (secrets, deps, Docker) | ✅ Complete |
+| First Cloud Run deploy | 🔲 Run `bash scripts/gcp-setup.sh` then push to `main` |
 
 ---
 
@@ -93,9 +97,9 @@ These were not in APP_PLAN.md but emerged from real usage:
 - `prompts/knowledge/domain-B.md`: firewall/network ownership rules; MCP auth patterns (PAT scoping, OAuth flows, secret naming)
 
 **PDF export**
-- `src/pdfExport.ts`: shared Playwright/Chromium HTML→PDF renderer
-- Server routes: `GET /api/exams/:id/pdf-status`, `POST /api/exams/:id/pdf` (dev only)
-- Static serving: `data/exams/` served at `/exams/*`
+- `src/pdfExport.ts`: shared Playwright/Chromium HTML→PDF renderer; `playwright` is dynamically imported (devDep only — never loaded in prod Docker)
+- `src/storage.ts`: GCS helper — uploads PDFs to `gh-600-prep-pdfs` bucket after generation; falls back to local `data/exams/` if `GCS_BUCKET` not set
+- Server routes: `GET /api/exams/:id/pdf-status`, `POST /api/exams/:id/pdf` (dev only); `pdf-status` returns GCS URL when available
 - Filenames are human-readable: `gh-600-YYYY-MM-DD-<count>q-<id8>.pdf`
 - CLI: `npm run export-pdf -- <exam-id>`
 
@@ -113,17 +117,49 @@ Dev mode (npm run dev, NODE_ENV != "production")
   - All exams listed with isPublished flag
   - Generate panel visible (if OPENAI_API_KEY set)
   - PDF generate/download buttons visible per exam
+    → after generation, PDF uploaded to GCS (if GCS_BUCKET set)
+    → download URL = GCS public URL or /exams/<file> fallback
   - Publish/unpublish toggle visible per exam
 
-Production (npm start, NODE_ENV=production)
+Production (Cloud Run, NODE_ENV=production)
   - Only exams in data/published.json are returned
   - No generate panel, no PDF buttons, no publish toggle
+  - Exam data (exams.json, published.json, PDFs) baked into Docker image at deploy time
+  - OPENAI_API_KEY injected from Secret Manager — never reaches browser
 ```
 
 **Key invariants (must never break):**
 - `OPENAI_API_KEY` never reaches the browser under any circumstance
 - `generateBatch()` throws immediately without `OPENAI_API_KEY`
+- `playwright` is a devDependency — dynamically imported inside `generateExamPdf()` only; never loaded in prod
 - Test fixtures (`tests/fixtures/questions.ts`) are imported only by test files
+
+---
+
+## Production deployment workflow
+
+See `CLOUD_RUN_DEPLOYMENT_RUNBOOK.md` for full details. Summary:
+
+1. **First time only:** `bash scripts/gcp-setup.sh` (provisions all GCP infra, sets GitHub secrets)
+2. **Every deploy:** `git push origin main` — CI does the rest
+3. **Publish an exam:** toggle in dev UI → commit `data/published.json` + `data/exams/exams.json` → push
+
+CI pipeline (`.github/workflows/ci.yml`):
+
+| Job | Runs on | Does |
+|-----|---------|------|
+| Test | every push/PR | `npm test` — 13 Vitest unit tests |
+| TypeScript build | every push/PR | `npm run build` — full tsc check |
+| Deploy | push to `main` only | Docker build → Artifact Registry → Cloud Run → `/healthz` check |
+
+GitHub Actions secrets required (set by `gcp-setup.sh`):
+
+| Secret | Value |
+|--------|-------|
+| `GCP_PROJECT_ID` | `exam-prep-600` |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | WIF provider resource name |
+| `GCP_SERVICE_ACCOUNT` | `gh-600-prep-deploy@exam-prep-600.iam.gserviceaccount.com` |
+| `GCS_BUCKET` | `gh-600-prep-pdfs` |
 
 ---
 
@@ -136,13 +172,18 @@ Production (npm start, NODE_ENV=production)
 | Domain/item-type distribution | `src/blueprint.ts` |
 | API routes | `src/server.ts` |
 | PDF export | `src/pdfExport.ts`, `scripts/export-exam-pdf.ts` |
+| PDF cloud storage | `src/storage.ts` |
 | Frontend (all views) | `public/app.js`, `public/styles.css` |
 | Published exam control | `data/published.json` (edit directly or use UI toggle) |
 | Persistence | `src/persistence.ts`, `data/exams/exams.json`, `data/attempts/` |
 | Scoring / study loops | `src/scoring.ts`, `src/studyLoops.ts` |
 | Anti-bias checks | `src/antiBias.ts` |
 | Types | `src/types.ts` |
-| Config (model, effort, dev/prod) | `src/config.ts`, `.env` |
+| Config (model, effort, dev/prod) | `src/config.ts`, `.env` (copy from `.env.example`) |
+| GCP infra setup | `scripts/gcp-setup.sh` |
+| CI/CD pipeline | `.github/workflows/ci.yml` |
+| Docker image | `Dockerfile`, `.dockerignore` |
+| Deployment operations | `.github/CLOUD_RUN_DEPLOYMENT_RUNBOOK.md` |
 
 ---
 
@@ -159,16 +200,17 @@ All 13 unit tests are fixture-based (no OpenAI calls). The Playwright e2e spec (
 
 ## Phase 4 — Cloud Run deployment checklist
 
-- [ ] `npm test` passes
-- [ ] `npm run build` passes
-- [ ] At least one exam is published in `data/published.json`
-- [ ] `docker build -t gh-600-prep .` succeeds locally
-- [ ] Image pushed to Artifact Registry (`gcr.io/<project>/gh-600-prep`)
-- [ ] Cloud Run service created with `OPENAI_API_KEY` from Secret Manager
-- [ ] `/healthz` returns `{ ok: true }` at deployed URL
-- [ ] Home page lists published exam(s) at deployed URL
-
-See `.github/CLOUD_RUN_DEPLOYMENT_RUNBOOK.md` for the full deployment steps.
+- [x] CI/CD pipeline configured (`.github/workflows/ci.yml`)
+- [x] One-shot GCP setup script (`scripts/gcp-setup.sh`)
+- [x] GCS bucket wired for PDF storage (`src/storage.ts`)
+- [x] Security audit clean — `npm audit` 0 vulnerabilities, no secrets in source
+- [x] `npm test` passes (13/13)
+- [x] `npm run build` passes
+- [x] `.env.example` documents all env vars
+- [x] `bash scripts/gcp-setup.sh` run (provisions infra + sets GitHub secrets)
+- [x] At least one exam published in `data/published.json` and committed
+- [ ] Push to `main` → CI deploys → `/healthz` returns `{"ok":true}`
+- [ ] Home page lists published exam(s) at Cloud Run URL
 
 ---
 
@@ -177,8 +219,9 @@ See `.github/CLOUD_RUN_DEPLOYMENT_RUNBOOK.md` for the full deployment steps.
 | Item | Notes |
 |------|-------|
 | Playwright e2e tests not in `npm test` | `tests/e2e/exam.spec.ts` uses `@playwright/test` which conflicts with Vitest runner. Run with `npx playwright test` separately. |
-| Sequence/matching drag-and-drop | Current UI uses click-to-select; true drag-and-drop was deferred to a future phase. |
-| Analytics view | Score + domain breakdown is shown in review; the deeper per-item-type / distractor-attraction analytics panel is wired in `src/studyLoops.ts` and the endpoints exist but the UI tab was simplified. |
-| `infer: false` in some questions | Some generated questions reference the deprecated `infer: false` field. Domain-A knowledge file now notes this, but existing generated exams may still contain it. Regenerate or edit affected questions if needed. |
-| PDF generation requires Chromium | `npx playwright install chromium` must be run in any new environment. The Dockerfile handles this. |
+| Sequence/matching drag-and-drop | Current UI uses click-to-select; true drag-and-drop was deferred. |
+| Analytics view | Score + domain breakdown shown in review; deeper per-item-type analytics wired in `src/studyLoops.ts` but UI tab was simplified. |
+| `infer: false` in some questions | Some generated questions reference deprecated `infer: false`. Domain-A knowledge file notes this, but existing generated exams may contain it. Regenerate or edit if needed. |
+| GCS uuid transitive vulnerability | `@google-cloud/storage@7.x` pulls in `uuid < 11.1.1` via transitive deps. Mitigated via `overrides` in `package.json`. Revisit when GCS SDK releases a fix. |
+| PDF generation needs Chromium | `npx playwright install chromium` must be run in any new dev environment. Not needed in prod (PDF generation is dev-only). |
 

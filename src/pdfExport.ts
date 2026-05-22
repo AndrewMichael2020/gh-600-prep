@@ -2,13 +2,14 @@
  * Shared PDF export logic used by both the server API route (dev mode) and
  * the standalone CLI script (scripts/export-exam-pdf.ts).
  *
- * generateExamPdf(exam) → writes data/exams/<id>.pdf and returns the file path.
+ * generateExamPdf(exam) → writes data/exams/<stem>.pdf, optionally uploads to
+ * GCS if GCS_BUCKET is configured, and returns { outPath, filename, gcsUrl }.
  */
 
-import { chromium } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
 import { ExamSet } from "./types.js";
+import { gcsConfigured, uploadPdf } from "./storage.js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -306,17 +307,25 @@ export function examPdfStem(exam: Pick<ExamSet, "id" | "createdAt" | "questions"
   return `gh-600-${date}-${exam.questions.length}q-${exam.id.slice(0, 8)}`;
 }
 
-export async function generateExamPdf(exam: ExamSet): Promise<{ outPath: string; filename: string }> {
+export async function generateExamPdf(
+  exam: ExamSet,
+): Promise<{ outPath: string; filename: string; gcsUrl: string | null }> {
   const examsDir = path.join(process.cwd(), "data/exams");
   const stem = examPdfStem(exam);
   const tmpHtml = path.join(examsDir, `${stem}.html`);
   const outPath = path.join(examsDir, `${stem}.pdf`);
+  const filename = `${stem}.pdf`;
 
-  console.log(`[PDF] Building PDF for exam ${exam.id} → ${stem}.pdf (${exam.questions.length} questions)…`);
+  console.log(`[PDF] Building PDF for exam ${exam.id} → ${filename} (${exam.questions.length} questions)…`);
 
   const html = buildHtml(exam);
   fs.writeFileSync(tmpHtml, html, "utf8");
 
+  // Dynamic import: playwright is a devDependency and must not be imported at
+  // the module level — that crashes the prod Docker container on startup.
+  // This function is always guarded by IS_DEV (403 in prod), so it is never
+  // called in production where playwright is absent.
+  const { chromium } = await import("playwright");
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage();
@@ -333,5 +342,10 @@ export async function generateExamPdf(exam: ExamSet): Promise<{ outPath: string;
     if (fs.existsSync(tmpHtml)) fs.unlinkSync(tmpHtml);
   }
 
-  return { outPath, filename: `${stem}.pdf` };
+  let gcsUrl: string | null = null;
+  if (gcsConfigured()) {
+    gcsUrl = await uploadPdf(outPath, filename);
+  }
+
+  return { outPath, filename, gcsUrl };
 }

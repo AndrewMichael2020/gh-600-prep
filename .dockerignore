@@ -3,7 +3,7 @@ npm-debug.log
 dist
 .git
 .github
-data
+data/attempts
 *.local
 .env
 .env.*

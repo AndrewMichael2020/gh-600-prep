@@ -183,10 +183,12 @@ app.get("/api/exams/:id/pdf-status", async (req, res) => {
   const exam = await getExam(req.params.id);
   if (!exam) return res.status(404).json({ error: "Exam not found" });
   const { examPdfStem } = await import("./pdfExport.js");
+  const { resolvePdfStatus } = await import("./storage.js");
   const stem = examPdfStem(exam);
-  const pdfPath = path.join(process.cwd(), "data/exams", `${stem}.pdf`);
-  const exists = existsSync(pdfPath);
-  return res.json({ exists, url: exists ? `/exams/${stem}.pdf` : null, filename: exists ? `${stem}.pdf` : null });
+  const filename = `${stem}.pdf`;
+  const localDir = path.join(process.cwd(), "data/exams");
+  const { exists, url } = await resolvePdfStatus(filename, localDir);
+  return res.json({ exists, url, filename: exists ? filename : null });
 });
 
 app.post("/api/exams/:id/pdf", async (req, res) => {
@@ -197,8 +199,9 @@ app.post("/api/exams/:id/pdf", async (req, res) => {
   if (!exam) return res.status(404).json({ error: "Exam not found" });
 
   try {
-    const { outPath, filename } = await generateExamPdf(exam);
-    return res.json({ ok: true, url: `/exams/${filename}`, filename, path: outPath });
+    const { outPath, filename, gcsUrl } = await generateExamPdf(exam);
+    const url = gcsUrl ?? `/exams/${filename}`;
+    return res.json({ ok: true, url, filename, path: outPath });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[PDF] Generation failed:", msg);

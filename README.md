@@ -15,16 +15,28 @@ npx playwright install chromium   # needed for PDF export
 
 ### 2. Configure environment
 
-Create `.env` in the repo root:
+Copy the example and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+Required:
 
 ```env
 OPENAI_API_KEY=sk-...
+```
+
+Optional (defaults shown):
+
+```env
 OPENAI_MODEL=gpt-5.5
 OPENAI_REASONING_EFFORT=medium
 OPENAI_REVIEW_REASONING_EFFORT=high
+PORT=3000
 ```
 
-`OPENAI_API_KEY` is server-side only and never sent to the browser. Generation still works without a key (falls back to a local stub), but question quality will be low.
+`OPENAI_API_KEY` is server-side only and never sent to the browser.
 
 ### 3. Run
 
@@ -86,7 +98,7 @@ Questions are spread across the six official GH-600 exam domains:
 
 ### Anti-bias enforcement
 
-Every generated exam is checked for answer-position bias (`src/antiBias.ts`): correct answers should be roughly equally distributed across positions A–D, and the longest option should not be correct more than ~30% of the time.
+Every generated exam is checked for answer-position bias (`src/antiBias.ts`): correct answers should be roughly equally distributed across positions A–D. The generation prompt also enforces that the shortest/second-shortest option is correct ≥50% of the time and the longest option is correct ≤10% of the time — countering the LLM tendency to make longer answers correct.
 
 ---
 
@@ -200,6 +212,75 @@ All JSON endpoints. `IS_DEV` endpoints return 403 in production.
 | `POST` | `/api/attempts` | Submit an attempt; returns scored result |
 | `GET` | `/api/attempts/:id` | Fetch a stored attempt |
 | `GET` | `/healthz` | Health check |
+
+---
+
+## CI / CD and production deployment
+
+### GitHub Actions pipeline
+
+Every push triggers `.github/workflows/ci.yml`, which runs three jobs:
+
+| Job | Trigger | What it does |
+|-----|---------|-------------|
+| **Test** | every push / PR | `npm ci && npm test` (Vitest, 13 unit tests) |
+| **TypeScript build** | every push / PR | `npm ci && npm run build` — full `tsc` compile check |
+| **Deploy to Cloud Run** | push to `main` only | Builds Docker image → pushes to Artifact Registry → deploys to Cloud Run → verifies `/healthz` |
+
+The deploy job uses **Workload Identity Federation** (no long-lived SA keys checked in). It only runs after both Test and Build pass.
+
+### First-time GCP setup
+
+A one-shot setup script is provided. Run it once from any machine with `gcloud` and `gh` authenticated:
+
+```bash
+gcloud auth login
+gcloud auth application-default login
+gh auth login
+bash scripts/gcp-setup.sh
+```
+
+The script creates everything needed and sets all four GitHub Actions secrets automatically:
+
+| What | Detail |
+|------|--------|
+| Artifact Registry repo | `gh-600-prep` in `us-central1` |
+| GCS bucket | `gh-600-prep-pdfs` — public-read, for generated PDFs |
+| Service account | `gh-600-prep-deploy@exam-prep-600.iam.gserviceaccount.com` |
+| WIF pool / provider | `github-actions` / `github` scoped to this repo |
+| Secret Manager | `openai-api-key` read from local `.env` |
+
+### Required GitHub Actions secrets
+
+Set in **Settings → Secrets and variables → Actions** (the setup script does this automatically):
+
+| Secret | Value |
+|--------|-------|
+| `GCP_PROJECT_ID` | `exam-prep-600` |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | Full WIF provider resource name |
+| `GCP_SERVICE_ACCOUNT` | Deploy SA email |
+| `GCS_BUCKET` | GCS bucket name for PDFs |
+
+### Deploy flow
+
+```
+git push origin main
+  └─ CI: test → build → deploy
+       └─ docker build + push to Artifact Registry
+            └─ gcloud run deploy (zero-downtime rolling update)
+                 └─ curl /healthz → must return {"ok":true}
+```
+
+### Production vs dev
+
+In production (`NODE_ENV=production`):
+- Only **published** exams appear (controlled by `data/published.json` + publish toggle in dev mode)
+- **No** generation panel, publish toggle, PDF generate, or PDF download buttons
+- Exams and PDFs are baked into the Docker image at build time; PDFs are served from GCS
+
+To publish an exam to production: toggle it in dev mode → commit `data/published.json` + `data/exams/exams.json` → push to `main`. The CI deploy bakes the new data into the image automatically.
+
+See `.github/CLOUD_RUN_DEPLOYMENT_RUNBOOK.md` for operational details (key rotation, rollback, verification).
 
 ---
 

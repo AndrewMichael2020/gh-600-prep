@@ -1,62 +1,118 @@
-# Cloud Run Deployment Runbook (GCP Console-first)
+# Cloud Run Deployment Runbook
 
-Last updated: 2026-05-18 (UTC)
+> **Normal workflow:** just push to `main`. The CI/CD pipeline handles everything automatically.
+> This runbook covers first-time setup, manual operations, and rollback.
 
-## 1) Pre-deploy checklist
+---
 
-- [ ] `npm test` passes
-- [ ] `npm run build` passes
-- [ ] `.github/OPENAI_API_USAGE.md` reviewed (API params, model, cost expectations noted)
-- [ ] Container builds locally from `Dockerfile`
+## First-time setup (run once)
 
-## 2) Build & push container image
-
-Example (Cloud Shell):
+Prerequisites: `gcloud` authenticated, `gh` authenticated, repo cloned.
 
 ```bash
-gcloud builds submit --tag REGION-docker.pkg.dev/PROJECT_ID/REPO/gh-600-prep:latest
+gcloud auth login
+gcloud auth application-default login
+gh auth login
+bash scripts/gcp-setup.sh
 ```
 
-## 3) Deploy from GCP Console
+`gcp-setup.sh` provisions all GCP infrastructure and sets all GitHub Actions secrets:
 
-In **Cloud Run → Create Service**:
+| Resource | Name |
+|----------|------|
+| Artifact Registry repo | `gh-600-prep` (us-central1) |
+| GCS bucket | `gh-600-prep-pdfs` (public-read, stores generated PDFs) |
+| Service account | `gh-600-prep-deploy@exam-prep-600.iam.gserviceaccount.com` |
+| Workload Identity pool/provider | `github-actions` / `github` (scoped to this repo) |
+| Secret Manager secret | `openai-api-key` (read from local `.env`) |
+| GitHub Actions secrets set | `GCP_PROJECT_ID`, `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`, `GCS_BUCKET` |
 
-1. Select image from Artifact Registry.
-2. Set port to `8080`.
-3. Set minimum CPU/memory as needed (start small).
-4. Configure environment variables:
-   - `OPENAI_MODEL=gpt-5.5`
-   - `OPENAI_REASONING_EFFORT=medium`
-   - `OPENAI_REVIEW_REASONING_EFFORT=high`
-5. Configure secrets:
-   - `OPENAI_API_KEY` from Secret Manager, injected as env var.
+After running the script, push to `main` to trigger the first deploy.
 
-## 4) Post-deploy verification checks
+---
 
-Replace `SERVICE_URL` with Cloud Run URL.
+## Normal deploy
 
 ```bash
-curl -fsS "${SERVICE_URL}/healthz"
-curl -fsS "${SERVICE_URL}/" >/dev/null
+git push origin main
 ```
 
-Expected:
-- `/healthz` returns JSON with `ok: true`.
-- `/` serves the app shell.
+CI runs: **Test → TypeScript build → Deploy to Cloud Run**.  
+Deploy only triggers on push to `main` after both other jobs pass.
 
-## 5) Rollback procedure
+The deploy step:
+1. Builds Docker image (exam data + published.json baked in)
+2. Pushes to Artifact Registry
+3. Runs `gcloud run deploy` (zero-downtime rolling update)
+4. Verifies `GET /healthz` returns `{"ok":true}`
 
-In Cloud Run console:
+---
 
-1. Open service → **Revisions**.
-2. Route 100% traffic to previous healthy revision.
-3. Re-run health checks.
+## Publishing an exam to production
 
-## 6) Production readiness checks
+1. In dev mode (`npm run dev`), generate an exam
+2. Click the **🔒 Unpublished** toggle → becomes **✅ Published** (updates `data/published.json`)
+3. Generate a PDF if desired — it uploads to GCS automatically if `GCS_BUCKET` is set
+4. Commit and push:
+   ```bash
+   git add data/published.json data/exams/exams.json data/exams/*.pdf
+   git commit -m "publish: add exam <id>"
+   git push origin main
+   ```
+5. The deploy bakes the updated exam data into the image — production users see it immediately
 
-- [ ] No secrets in client code.
-- [ ] `OPENAI_API_KEY` only from Secret Manager/env.
-- [ ] Health endpoint up (`/healthz`).
-- [ ] 429 rate-limit behavior verified.
-- [ ] Error responses for missing exam/attempt verified.
-- [ ] Export endpoint functional (`/api/exports/attempt/:attemptId`).
+---
+
+## Environment variables (Cloud Run)
+
+Set automatically by the CI workflow. To update manually:
+
+```bash
+gcloud run services update gh-600-prep \
+  --region us-central1 \
+  --set-env-vars "OPENAI_MODEL=gpt-5.5,OPENAI_REASONING_EFFORT=medium,OPENAI_REVIEW_REASONING_EFFORT=high,GCS_BUCKET=gh-600-prep-pdfs" \
+  --set-secrets "OPENAI_API_KEY=openai-api-key:latest"
+```
+
+To rotate the OpenAI key:
+```bash
+echo "sk-new-key" | gcloud secrets versions add openai-api-key --data-file=-
+# then redeploy to pick up the new version:
+git commit --allow-empty -m "chore: rotate openai key" && git push origin main
+```
+
+---
+
+## Post-deploy verification
+
+```bash
+SERVICE_URL=$(gcloud run services describe gh-600-prep \
+  --region us-central1 --format "value(status.url)")
+
+curl -fsS "${SERVICE_URL}/healthz"          # → {"ok":true,...}
+curl -fsS "${SERVICE_URL}/api/exams"        # → published exams array
+curl -fsS "${SERVICE_URL}/" > /dev/null     # → 200 app shell
+```
+
+---
+
+## Rollback
+
+**Via CI:** revert the commit and push to `main` — a new deploy will run automatically.
+
+**Via console (immediate):**
+1. Cloud Run → `gh-600-prep` → Revisions
+2. Find the last healthy revision → **Manage Traffic** → route 100% traffic to it
+
+---
+
+## Production readiness checklist
+
+- [ ] `npm test` passes (13/13)
+- [ ] `npm run build` passes (clean tsc)
+- [ ] At least one exam in `data/published.json`
+- [ ] `scripts/gcp-setup.sh` has been run (GitHub secrets set)
+- [ ] `npm audit` shows 0 vulnerabilities
+- [ ] `/healthz` returns `{"ok":true}` at deployed URL
+- [ ] Home page lists published exam(s)
+- [ ] `OPENAI_API_KEY` only reachable server-side (verify: browser DevTools → Network, no key in responses)
