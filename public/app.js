@@ -248,7 +248,7 @@ function renderQuestion() {
 
   // Card content
   const card = document.getElementById("questionCard");
-  const showExplanation = state.mode === "review";
+  const showExplanation = state.mode === "review" && state.answers[q.id] !== undefined;
 
   let artifactHtml = "";
   if (q.artifact) {
@@ -286,9 +286,7 @@ function renderOptions(q) {
   if (q.type === "sequence_order" || q.type === "matching_magnet" || q.type === "dropdown_completion") return;
   const container = document.getElementById("optionsContainer");
   const selected = state.answers[q.id];
-  const showResult = state.mode === "review";
-
-  container.innerHTML = q.options.map((opt) => {
+  const showResult = state.mode === "review" && state.answers[q.id] !== undefined;
     const isMulti = q.type === "multi_select";
     const isSelected = isMulti
       ? Array.isArray(selected) && selected.includes(opt.id)
@@ -358,11 +356,7 @@ function renderStructuredInteraction(q) {
   if (q.type === "matching_magnet") {
     const pairs = state.answers[q.id]?.pairs ?? {};
     const choices = q.matchChoices ?? [];
-    const showResult = state.mode === "review";
-    const correctPairs = (typeof q.correctAnswer === "object" && q.correctAnswer !== null && "pairs" in q.correctAnswer)
-      ? q.correctAnswer.pairs : {};
-
-    if (choices.length === 0) {
+    const showResult = state.mode === "review" && state.answers[q.id] !== undefined;
       return `<div class="structured-block">
         <p class="match-hint">Match each item to its value:</p>
         ${q.options.map((opt) => `
@@ -394,10 +388,7 @@ function renderStructuredInteraction(q) {
   }
   if (q.type === "dropdown_completion") {
     const pairs = state.answers[q.id]?.pairs ?? {};
-    const showResult = state.mode === "review";
-    const correctPairs = (typeof q.correctAnswer === "object" && q.correctAnswer !== null && "pairs" in q.correctAnswer)
-      ? q.correctAnswer.pairs : {};
-    const slots = q.slots ?? [];
+    const showResult = state.mode === "review" && state.answers[q.id] !== undefined;
     const template = q.statementTemplate ?? "";
 
     // Split template on {{slotN}} placeholders and interleave selects
@@ -453,16 +444,18 @@ function renderCaseStudyPanel(q) {
   return renderCaseStudyPanelMarkup(cs);
 }
 
-function renderExplanation(q) {
+function renderExplanation(q, open = false) {
+  if (!q.explanation) return "";
+  const o = open ? " open" : "";
   const whyWrong = Object.entries(q.explanation.whyDistractorsWrong ?? {})
     .map(([k, v]) => `<li><strong>${k}:</strong> ${escHtml(String(v))}</li>`)
     .join("");
   return `<div class="explanation-block">
-    <details>
+    <details${o}>
       <summary>✅ Why the correct answer is right</summary>
       <div class="exp-body">${escHtml(q.explanation.whyCorrect)}</div>
     </details>
-    ${whyWrong ? `<details>
+    ${whyWrong ? `<details${o}>
       <summary>❌ Why the other options are wrong</summary>
       <div class="exp-body"><ul class="exp-why-list">${whyWrong}</ul></div>
     </details>` : ""}
@@ -746,7 +739,7 @@ function buildReviewView(filter) {
             : `<span class="ans-user">Your answer: ${userLabel}</span>
                <span class="ans-correct">Correct: ${correctLabel}</span>`}
         </div>
-        ${renderExplanation(q)}
+        ${renderExplanation(q, true)}
       </div>
     </div>`;
   }).filter(Boolean);
