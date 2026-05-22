@@ -159,15 +159,26 @@ function buildHtml(exam: ExamSet): string {  const date = new Date(exam.createdA
 
   const answerKey = exam.questions.map((q, i) => {
     const ca = q.correctAnswer;
+    const optMap = Object.fromEntries(q.options.map((o) => [o.id, o.text]));
+    const trunc = (s: string, n = 48) => s.length > n ? s.slice(0, n) + "…" : s;
     let ans: string;
-    if (typeof ca === "string") ans = ca;
-    else if (Array.isArray(ca)) ans = ca.join(", ");
-    else if (ca && typeof ca === "object" && "pairs" in ca)
+    if (typeof ca === "string") {
+      ans = ca;
+    } else if (Array.isArray(ca)) {
+      ans = ca.join(", ");
+    } else if (ca && typeof ca === "object" && "pairs" in ca) {
+      // matching: show "Option text → choice text" for each pair
       ans = Object.entries((ca as { pairs: Record<string, string> }).pairs)
-        .map(([k, v]) => `${k}→${v}`).join("; ");
-    else if (ca && typeof ca === "object" && "order" in ca)
-      ans = ((ca as { order: string[] }).order).join(" → ");
-    else ans = JSON.stringify(ca);
+        .map(([k, v]) => `${trunc(optMap[k] ?? k, 30)} → ${trunc(v, 30)}`)
+        .join(" | ");
+    } else if (ca && typeof ca === "object" && "order" in ca) {
+      // sequence: show numbered steps with truncated text, not raw IDs
+      ans = (ca as { order: string[] }).order
+        .map((id, idx) => `${idx + 1}. ${trunc(optMap[id] ?? id, 40)}`)
+        .join(" → ");
+    } else {
+      ans = JSON.stringify(ca);
+    }
     return `<tr><td>Q${i + 1}</td><td>${esc(q.type.replace(/_/g, " "))}</td><td><strong>${esc(ans)}</strong></td></tr>`;
   }).join("");
 
