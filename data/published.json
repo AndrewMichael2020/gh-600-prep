@@ -1,0 +1,6 @@
+{
+  "_comment": "List exam IDs to expose in production. In dev mode all exams are visible regardless.",
+  "examIds": [
+    "a1ac29d0-79db-4b98-b459-4ca408e4cc73"
+  ]
+}

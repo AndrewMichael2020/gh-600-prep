@@ -33,7 +33,7 @@ function showView(id) {
 // · If neither      → shows a "no exams" message.
 async function initSetupView() {
   const [cfg, exams] = await Promise.all([
-    fetch("/api/config").then((r) => r.json()).catch(() => ({ hasApiKey: false, examCount: 0 })),
+    fetch("/api/config").then((r) => r.json()).catch(() => ({ isDev: false, hasApiKey: false, examCount: 0 })),
     fetch("/api/exams").then((r) => r.json()).catch(() => []),
   ]);
 
@@ -42,8 +42,9 @@ async function initSetupView() {
     document.getElementById("examListSection").classList.remove("hidden");
   }
 
-  if (cfg.hasApiKey) {
+  if (cfg.isDev && cfg.hasApiKey) {
     document.getElementById("generateSection").classList.remove("hidden");
+    renderDistPreview(state.questionCount);
   } else if (exams.length === 0) {
     document.getElementById("noExamsMsg").classList.remove("hidden");
   }
@@ -96,32 +97,58 @@ async function loadExam(examId) {
 
 initSetupView();
 
-// ── Setup form (generation) ─────────────────────────────────────────
-document.querySelectorAll("#countPills .pill").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll("#countPills .pill").forEach((p) => p.classList.remove("active"));
-    btn.classList.add("active");
-    state.questionCount = Number(btn.dataset.count);
-    document.getElementById("customCount").value = "";
-  });
-});
+// ── Domain distribution preview ─────────────────────────────────────
+const DOMAIN_BASES = [
+  { id: "A", name: "Agent architecture & SDLC", count: 17 },
+  { id: "B", name: "MCP & permissions",          count: 21 },
+  { id: "C", name: "Memory & state",              count: 14 },
+  { id: "D", name: "Evaluation & telemetry",      count: 17 },
+  { id: "E", name: "Multi-agent orchestration",   count: 18 },
+  { id: "F", name: "Guardrails & governance",     count: 13 },
+];
 
-document.getElementById("customCount").addEventListener("input", (e) => {
-  const v = Number(e.target.value);
-  if (v > 0) {
-    document.querySelectorAll("#countPills .pill").forEach((p) => p.classList.remove("active"));
-    state.questionCount = v;
+function calcDomainDist(total) {
+  if (total < 1) return [];
+  const scaled = DOMAIN_BASES.map((d) => ({ ...d, count: Math.floor((d.count / 100) * total) }));
+  let rem = total - scaled.reduce((s, d) => s + d.count, 0);
+  const order = [...scaled].sort((a, b) => b.count - a.count);
+  let i = 0;
+  while (rem-- > 0) {
+    scaled.find((d) => d.id === order[i % order.length].id).count += 1;
+    i++;
   }
-});
+  return scaled;
+}
 
-document.querySelectorAll("#modePills .pill").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll("#modePills .pill").forEach((p) => p.classList.remove("active"));
-    btn.classList.add("active");
-    state.mode = btn.dataset.mode;
-    document.getElementById("startBtn").textContent =
-      state.mode === "review" ? "Generate & Practice" : "Generate Exam";
-  });
+function renderDistPreview(total) {
+  const el = document.getElementById("domainDistPreview");
+  if (!el) return;
+  const n = Number(total);
+  if (!n || n < 1) { el.innerHTML = ""; return; }
+  const domains = calcDomainDist(n);
+  const maxCount = Math.max(...domains.map((d) => d.count), 1);
+
+  const caseQs  = n >= 100 ? 16 : n >= 70 ? 12 : n >= 30 ? 8 : n >= 10 ? 4 : 0;
+  const matchQs = n >= 100 ? 18 : Math.max(0, Math.floor(n * 0.18));
+
+  el.innerHTML = `
+    <p class="form-label" style="margin-bottom:.2rem">Distribution</p>
+    ${domains.map((d) => `
+      <div class="dist-row">
+        <span class="dist-label">${escHtml(d.id)}</span>
+        <span class="dist-name">${escHtml(d.name)}</span>
+        <span class="dist-count">${d.count}q</span>
+        <div class="dist-bar-wrap" style="grid-column:1/-1">
+          <div class="dist-bar-fill" style="width:${Math.round((d.count / maxCount) * 100)}%"></div>
+        </div>
+      </div>`).join("")}
+    <p class="dist-special">+ ~${caseQs} case-study questions · ~${matchQs} matching/sequence</p>`;
+}
+
+// ── Setup form (generation) ─────────────────────────────────────────
+document.getElementById("questionCount").addEventListener("input", (e) => {
+  const v = Number(e.target.value);
+  if (v > 0) { state.questionCount = v; renderDistPreview(v); }
 });
 
 document.getElementById("startBtn").addEventListener("click", startGeneration);
@@ -130,8 +157,7 @@ document.getElementById("startBtn").addEventListener("click", startGeneration);
 function startGeneration() {
   showView("view-loading");
   document.getElementById("loadingBar").style.width = "0%";
-  document.getElementById("loadingStatus").textContent =
-    state.mode === "review" ? "Building practice blueprint…" : "Building exam blueprint…";
+  document.getElementById("loadingStatus").textContent = "Building exam blueprint…";
   document.getElementById("loadingDetail").textContent = "";
   document.getElementById("batchLog").innerHTML = "";
 
@@ -174,15 +200,14 @@ function startGeneration() {
     if (data.type === "complete") {
       es.close();
       document.getElementById("loadingBar").style.width = "100%";
-      document.getElementById("loadingStatus").textContent =
-        state.mode === "review" ? "Practice session ready!" : "Exam ready!";
-      state.exam = data.exam;
-      state.currentIndex = 0;
-      state.answers = {};
-      state.confidence = {};
-      state.responseTimeMs = {};
-      state.flagged = new Set();
-      setTimeout(() => startExam(), 400);
+      document.getElementById("loadingStatus").textContent = "Exam generated — choose it below to begin.";
+      setTimeout(async () => {
+        // Refresh exam list and return to setup view so user picks mode there.
+        const exams = await fetch("/api/exams").then((r) => r.json()).catch(() => []);
+        renderExamList(exams);
+        document.getElementById("examListSection").classList.remove("hidden");
+        showView("view-setup");
+      }, 600);
     }
 
     if (data.type === "error") {
@@ -322,6 +347,19 @@ function wireOptionListeners(q) {
         state.answers[q.id] = id;
       }
       renderOptions(q);
+      wireOptionListeners(q); // re-wire new DOM nodes created by renderOptions
+      // In Practice mode, inject explanation block once answered
+      if (state.mode === "review" && state.answers[q.id] !== undefined) {
+        const card = document.getElementById("questionCard");
+        if (!card.querySelector(".explanation-block")) {
+          const expHtml = renderExplanation(q);
+          if (expHtml) {
+            const confRow = card.querySelector(".confidence-row");
+            if (confRow) confRow.insertAdjacentHTML("afterend", expHtml);
+            else card.insertAdjacentHTML("beforeend", expHtml);
+          }
+        }
+      }
       renderQMap();
     });
   });

@@ -2,10 +2,17 @@ import { describe, expect, it } from "vitest";
 import { buildBlueprint } from "../src/blueprint.js";
 
 describe("buildBlueprint", () => {
-  it("uses exact default domain distribution for 100", () => {
+  it("uses updated domain distribution for 100 (within official ranges)", () => {
     const plan = buildBlueprint(100);
-    expect(plan.domains.map((d) => d.count)).toEqual([18, 23, 12, 17, 18, 12]);
+    // New base: A=17, B=21, C=14, D=17, E=18, F=13 — all within official bands
+    expect(plan.domains.map((d) => d.count)).toEqual([17, 21, 14, 17, 18, 13]);
     expect(plan.itemTypes.case_study).toBe(16);
+  });
+
+  it("all batches have an explicit domainId", () => {
+    const plan = buildBlueprint(100);
+    const untagged = plan.batches.filter((b) => !b.domainId);
+    expect(untagged).toHaveLength(0);
   });
 
   it("scales to 30 and includes required types", () => {

@@ -135,6 +135,21 @@ body {
   font-size: .875rem; width: 120px;
 }
 .custom-input:focus { outline: 2px solid var(--color-primary); border-color: transparent; }
+
+/* Distribution preview inside Generate section */
+.domain-dist-preview {
+  margin: .5rem 0 1rem;
+  display: flex; flex-direction: column; gap: .4rem;
+}
+.dist-row {
+  display: grid; grid-template-columns: 2.2rem 1fr 2.8rem; align-items: center; gap: .5rem;
+}
+.dist-label { font-size: .78rem; font-weight: 700; color: var(--color-muted); }
+.dist-name  { font-size: .78rem; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dist-bar-wrap { grid-column: 1 / -1; height: 6px; background: var(--color-border); border-radius: 3px; }
+.dist-bar-fill { height: 100%; border-radius: 3px; background: var(--color-primary); }
+.dist-count { font-size: .78rem; font-weight: 600; color: var(--color-primary); text-align: right; }
+.dist-special { font-size: .75rem; color: var(--color-muted); margin-top: .2rem; }
 .domain-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: .4rem;
 }

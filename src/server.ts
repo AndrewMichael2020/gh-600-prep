@@ -1,6 +1,21 @@
 import express from "express";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { v4 as uuidv4 } from "uuid";
+
+const IS_DEV = process.env.NODE_ENV !== "production";
+
+function loadPublishedIds(): string[] | null {
+  if (IS_DEV) return null; // dev: show everything
+  const p = path.join(process.cwd(), "data", "published.json");
+  if (!existsSync(p)) return null;
+  try {
+    const raw = JSON.parse(readFileSync(p, "utf8")) as { examIds?: string[] };
+    return Array.isArray(raw.examIds) ? raw.examIds : null;
+  } catch {
+    return null;
+  }
+}
 
 import { assembleExam, createPlan, generateBatch, validateBatch } from "./generation.js";
 import { getAttempt, getExam, listExams, saveAttempt, saveExam } from "./persistence.js";
@@ -22,19 +37,27 @@ app.get("/healthz", (_req, res) => {
   return res.status(200).json({ ok: true, service: "gh-600-prep", timestamp: new Date().toISOString() });
 });
 
-// Reports whether server-side generation is available and how many exams are stored.
-// The frontend uses this to decide whether to show the exam list or the generate flow.
+// Reports runtime config for the frontend.
+// isDev     → whether the generate section should be shown
+// hasApiKey → whether generation is possible (dev only)
+// examCount → total visible exams
 app.get("/api/config", async (_req, res) => {
   const exams = await listExams();
+  const published = loadPublishedIds();
+  const visible = published ? exams.filter((e) => published.includes(e.id)) : exams;
   return res.json({
+    isDev: IS_DEV,
     hasApiKey: Boolean(process.env.OPENAI_API_KEY),
-    examCount: exams.length,
+    examCount: visible.length,
   });
 });
 
-// List all stored exams (summary only — no questions).
+// List stored exams (summary only — no questions).
+// In production returns only exams listed in data/published.json.
 app.get("/api/exams", async (_req, res) => {
-  const exams = await listExams();
+  const all = await listExams();
+  const published = loadPublishedIds();
+  const exams = published ? all.filter((e) => published.includes(e.id)) : all;
   return res.json(exams);
 });
 

@@ -29,37 +29,16 @@
           <code>npm run generate</code> to create exams.
         </p>
 
-        <!-- Generation form — shown only when server has an API key -->
+        <!-- Generation form — shown only in dev mode (NODE_ENV !== production) -->
         <section id="generateSection" class="hidden">
           <h2 class="section-title">Generate New Exam</h2>
 
           <div class="form-section">
-            <label class="form-label">Number of questions</label>
-            <div class="pill-group" id="countPills">
-              <button class="pill" data-count="10">10</button>
-              <button class="pill active" data-count="30">30</button>
-              <button class="pill" data-count="70">70</button>
-              <button class="pill" data-count="100">100</button>
-            </div>
-            <input id="customCount" type="number" min="1" max="200" placeholder="Custom…" class="custom-input" />
+            <label class="form-label" for="questionCount">Number of questions</label>
+            <input id="questionCount" type="number" min="1" max="200" value="30" class="custom-input" />
           </div>
 
-          <div class="form-section">
-            <label class="form-label">Mode</label>
-            <div class="pill-group" id="modePills">
-              <button class="pill active" data-mode="exam">🎯 Exam</button>
-              <button class="pill" data-mode="review">📖 Practice</button>
-            </div>
-          </div>
-
-          <div class="domain-grid">
-            <div class="domain-chip">A · Agent architecture</div>
-            <div class="domain-chip">B · MCP &amp; permissions</div>
-            <div class="domain-chip">C · Memory &amp; state</div>
-            <div class="domain-chip">D · Evaluation &amp; telemetry</div>
-            <div class="domain-chip">E · Multi-agent orchestration</div>
-            <div class="domain-chip">F · Guardrails &amp; governance</div>
-          </div>
+          <div id="domainDistPreview" class="domain-dist-preview"></div>
 
           <button id="startBtn" class="btn btn-primary btn-full">Generate Exam</button>
         </section>

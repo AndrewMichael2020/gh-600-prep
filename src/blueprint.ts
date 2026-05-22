@@ -1,13 +1,24 @@
 import { BatchPlan, Difficulty, DomainBlueprint, GenerationPlan, ItemTypeBlueprint } from "./types.js";
 
+// Official GH-600 domain weights (mid-range), slightly equalised so no single
+// domain dominates. All counts are within the official percentage bands.
+// A 15–20 % | B 20–25 % | C 10–15 % | D 15–20 % | E 15–20 % | F 10–15 %
 const baseDomains: DomainBlueprint[] = [
-  { id: "A", name: "Agent architecture and SDLC integration", count: 18 },
-  { id: "B", name: "MCP/tool use and environment permissions", count: 23 },
-  { id: "C", name: "Memory, state, and execution", count: 12 },
-  { id: "D", name: "Evaluation, telemetry, error analysis, and tuning", count: 17 },
-  { id: "E", name: "Multi-agent orchestration and incident response", count: 18 },
-  { id: "F", name: "Guardrails, safety, accountability, and governance", count: 12 },
+  { id: "A", name: "Agent architecture and SDLC integration",              count: 17 },
+  { id: "B", name: "MCP/tool use and environment permissions",             count: 21 },
+  { id: "C", name: "Memory, state, and execution",                        count: 14 },
+  { id: "D", name: "Evaluation, telemetry, error analysis, and tuning",   count: 17 },
+  { id: "E", name: "Multi-agent orchestration and incident response",      count: 18 },
+  { id: "F", name: "Guardrails, safety, accountability, and governance",   count: 13 },
 ];
+
+// Domain assignment order for case-study batches (highest-weight domains first).
+// Each batch gets the next domain in this cycle so scenarios spread across the exam.
+const CASE_STUDY_DOMAIN_CYCLE = ["B", "A", "D", "E", "C", "F"] as const;
+
+// Domains that receive matching/sequence batches.
+// Chosen to balance the domains that get fewer case-study questions.
+const MATCH_SEQ_DOMAINS = ["B", "A", "C", "F"] as const;
 
 const baseItemTypes: ItemTypeBlueprint = {
   single_choice: 42,
@@ -100,6 +111,10 @@ export function buildBlueprint(totalQuestions: number): GenerationPlan {
 
   const batches: BatchPlan[] = [];
   let batchIndex = 1;
+
+  // ── Per-domain SC / MS / code batches ───────────────────────────────
+  // Generate ~70 % of each domain's quota here; the rest comes from
+  // case-study and matching batches that are also domain-tagged below.
   for (const domain of domains) {
     if (domain.count <= 0) continue;
     batches.push({
@@ -111,27 +126,47 @@ export function buildBlueprint(totalQuestions: number): GenerationPlan {
       questionCount: Math.max(1, Math.floor(domain.count * 0.7)),
     });
   }
-  for (let i = 1; i <= cases; i++) {
+
+  // ── Case-study batches — each tagged to a specific domain ───────────
+  // Cycling through CASE_STUDY_DOMAIN_CYCLE spreads scenarios evenly.
+  const caseQPerBatch = Math.max(3, Math.floor(itemTypes.case_study / Math.max(1, cases)));
+  for (let i = 0; i < cases; i++) {
+    const domId = CASE_STUDY_DOMAIN_CYCLE[i % CASE_STUDY_DOMAIN_CYCLE.length];
+    const domMeta = domains.find((d) => d.id === domId) ?? { id: domId, name: domId, count: 0 };
     batches.push({
       id: `batch-${batchIndex++}`,
-      caseStudyId: `case-${i}`,
+      domainId: domId,
+      domainName: domMeta.name,
+      caseStudyId: `case-${i + 1}`,
       typeFocus: ["case_study"],
       difficultyFocus: ["hard", "very_hard"],
-      questionCount: Math.max(3, Math.floor(itemTypes.case_study / Math.max(1, cases))),
+      questionCount: caseQPerBatch,
     });
   }
-  batches.push({
-    id: `batch-${batchIndex++}`,
-    typeFocus: ["matching_magnet", "sequence_order"],
-    difficultyFocus: ["hard", "very_hard"],
-    questionCount: itemTypes.matching_magnet + itemTypes.sequence_order,
-  });
-  batches.push({
-    id: `batch-${batchIndex++}`,
-    typeFocus: ["single_choice", "multi_select", "code_or_config_artifact", "case_study"],
-    difficultyFocus: ["hard", "very_hard"],
-    questionCount: Math.max(1, safeTotal - batches.reduce((s, b) => s + b.questionCount, 0)),
-  });
+
+  // ── Matching / sequence batches — split across MATCH_SEQ_DOMAINS ────
+  // Distributing these to domains that receive fewer case-study questions
+  // (C, F) plus the two heaviest (B, A) keeps the overall distribution
+  // within the official percentage bands.
+  if (itemTypes.matching_magnet + itemTypes.sequence_order > 0) {
+    const matchSeqTotal = itemTypes.matching_magnet + itemTypes.sequence_order;
+    const baseCount = Math.floor(matchSeqTotal / MATCH_SEQ_DOMAINS.length);
+    const remainder = matchSeqTotal - baseCount * MATCH_SEQ_DOMAINS.length;
+
+    MATCH_SEQ_DOMAINS.forEach((domId, idx) => {
+      const qCount = baseCount + (idx < remainder ? 1 : 0);
+      if (qCount <= 0) return;
+      const domMeta = domains.find((d) => d.id === domId) ?? { id: domId, name: domId, count: 0 };
+      batches.push({
+        id: `batch-${batchIndex++}`,
+        domainId: domId,
+        domainName: domMeta.name,
+        typeFocus: ["matching_magnet", "sequence_order"],
+        difficultyFocus: ["hard", "very_hard"],
+        questionCount: qCount,
+      });
+    });
+  }
 
   return {
     totalQuestions: safeTotal,

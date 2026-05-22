@@ -294,7 +294,7 @@ export function assembleExam(plan: GenerationPlan, questions: PracticeQuestion[]
 
   const shuffledStandalone = [...standalone].sort(() => Math.random() - 0.5);
   const groupedItems = [...grouped.entries()].map(([, items]) => items.sort(() => Math.random() - 0.5));
-  const merged = [...shuffledStandalone, ...groupedItems.flat()].slice(0, plan.totalQuestions);
+  const merged = [...shuffledStandalone, ...groupedItems.flat()];
 
   return {
     id: uuidv4(),
