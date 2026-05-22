@@ -1,179 +1,221 @@
 # gh-600-prep
 
-Preparing for GH-600 (beta).
+A full-stack TypeScript study app for the **GitHub Certified: Agentic AI Developer** (GH-600 beta) certification. It uses the OpenAI API to generate realistic, scenario-driven practice exams, lets you take them in timed **Exam** or self-paced **Practice** mode, and exports any exam to a human-readable PDF.
 
-## Current implementation (Phase 1 vertical slice)
-
-This repository now includes a minimal full-stack TypeScript app that can:
-
-- Generate a configurable GH-600 practice set (30, 70, 100, or custom count)
-- Build a weighted domain/item-type blueprint
-- Generate questions in batches (not one-shot)
-- Validate batches and assemble a final exam
-- Persist exams/attempts to local JSON files
-- Run timed exam mode (`time_minutes = question_count * 1.2`)
-- Hide answers during exam mode, then show collapsible explanations in review
-- Show score + domain breakdown analytics
+---
 
 ## Quick start
 
-### 1) Install
+### 1. Install
 
 ```bash
 npm install
+npx playwright install chromium   # needed for PDF export
 ```
 
-### 2) Configure environment
+### 2. Configure environment
 
-Create `.env` (or export environment variables):
+Create `.env` in the repo root:
 
-```bash
-OPENAI_API_KEY=
+```env
+OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-5.5
 OPENAI_REASONING_EFFORT=medium
 OPENAI_REVIEW_REASONING_EFFORT=high
 ```
 
-`OPENAI_API_KEY` is server-side only and is never exposed in frontend code.  
-If no key is provided, the app uses a safe local fallback generator for development.
+`OPENAI_API_KEY` is server-side only and never sent to the browser. Generation still works without a key (falls back to a local stub), but question quality will be low.
 
-### 3) Run locally
+### 3. Run
 
-```bash
-npm run dev
-```
-
-Open: `http://localhost:3000`
-
-### 4) Test and build
-
-```bash
-npm test
-npm run build
-```
-
-## API endpoints
-
-- `POST /api/exams/blueprint`
-- `POST /api/questions/generate-batch`
-- `POST /api/questions/validate-batch`
-- `POST /api/exams/assemble`
-- `POST /api/attempts`
-- `GET /api/attempts/:id`
-- `GET /api/exams/:id`
-
-## Prompt templates
-
-Prompt templates are stored under `/prompts`:
-
-- `blueprint.prompt.md`
-- `generate-batch.prompt.md`
-- `generate-case-study.prompt.md`
-- `validate-question.prompt.md`
-- `anti-bias-review.prompt.md`
-- `assemble-exam.prompt.md`
-- `weakness-drill.prompt.md`
-
-## Limitations (Phase 1)
-
-- Generation quality is best with an OpenAI API key configured.
-- Matching/sequence UI is still baseline (fully advanced interactions are Phase 2).
-- Analytics currently focuses on overall score, domain score, and incorrect list.
-
-## Plan: Personal GH-600 Prep App (100 tough simulated questions)
-
-### 1) Objective
-- Build a personal practice app with **100 high-difficulty, scenario-first questions** that mirror Microsoft-style certification pressure (ambiguity, trade-offs, governance, and implementation details).
-- Emphasize GH-600 beta themes: agent architecture, MCP/tooling, supervision, security, CI/CD integration, evaluation, and operations.
-
-### 2) Question blueprint (100 total)
-- **Domain A: Agent architecture + SDLC integration** (20)
-- **Domain B: MCP/tool use + environment permissions** (25)
-- **Domain C: Governance, safety, and policy controls** (20)
-- **Domain D: Evaluation, telemetry, and tuning** (20)
-- **Domain E: Multi-agent orchestration + incident response** (15)
-
-### 3) Difficulty and realism profile
-- **70 scenario MCQs** (single best answer; 4 options)
-- **20 multi-select** (2–3 correct answers; partial-credit style in review mode)
-- **10 sequence/order or matching** (workflow ordering under constraints)
-- Include long case stems with logs, policy snippets, CI output, and agent transcripts.
-
-### 4) Authoring standards for tough, fair questions
-- Each question must contain:
-  - Role context (developer/platform/security/ops)
-  - Constraints (budget, compliance, branch policy, latency/SLA, blast radius)
-  - One clearly best answer + rationale
-  - Plausible distractors tied to common mistakes (over-permissioning, weak guardrails, missing human-in-loop, bad rollback design)
-- Require applied reasoning over memorization.
-
-### 5) Anti-bias rule for answer choices (critical)
-- **Do not let the longest option be correct by default.**
-- Enforce distribution over 100 questions:
-  - Correct option positions: A/B/C/D each ~25%
-  - Correct option length rank (short/medium/longest) balanced; longest ≤ 30%
-  - Use concise but specific correct answers; keep distractors equally polished
-
-### 6) Generation workflow
-1. Define a skills matrix (sub-skills per domain).
-2. Draft 2x question pool (200 items) to allow curation.
-3. Run quality gate:
-   - no duplicate stems
-   - no giveaway wording (“always”, “never”) unless objectively true
-   - no answer-length leakage
-4. Select final 100 by domain/format/difficulty targets.
-5. Add explanations:
-   - why correct
-   - why each distractor is wrong
-   - references to docs/objective tags.
-
-### 7) Scoring and study loops
-- Timed full exam mode: 120 minutes / 100 questions.
-- Adaptive review mode:
-  - weak-domain drills
-  - mistake replay
-  - confidence tracking (user marks certainty before submit).
-- Analytics:
-  - accuracy by domain/sub-skill
-  - average response time by item type
-  - distractor attraction rate (which wrong options are most tempting).
-
-### 8) Release plan (phased)
-- **Phase 1:** 30 validated questions + scoring + explanations
-- **Phase 2:** Expand to 70 with analytics and anti-bias checks
-- **Phase 3:** Reach 100, run 2 full mock exams, tune weak areas
-
-### 9) Acceptance criteria
-- 100 questions delivered with target domain mix.
-- Difficulty calibrated so experienced users are challenged.
-- Anti-bias metrics met (no systematic longest-answer advantage).
-- Every question includes explanation and objective tag(s).
+| Command | What it does |
+|---------|-------------|
+| `npm run dev` | Start server in **dev mode** at `http://localhost:3000` — generation UI and publish toggle are visible |
+| `npm start` | Start in **production mode** — only published exams are shown, no generation UI |
+| `npm test` | Run Vitest unit tests |
+| `npm run build` | TypeScript compile check (`tsc`) |
+| `npm run export-pdf` | CLI: export a specific exam to PDF |
 
 ---
 
-## Official source repositories (curated, trusted only)
+## How it works
 
-No dedicated official GH-600 question bank exists yet. Use only these verified GitHub/Microsoft repos as primary research material. Avoid braindump-style prep sites — low-trust for a beta exam.
+### Generating an exam (dev mode)
 
-| Priority | Repository | Why it matters for GH-600 |
-|----------|-----------|--------------------------|
-| 1 | [github-samples/agents-in-sdlc](https://github.com/github-samples/agents-in-sdlc) | Guided workshop: Copilot Agent Mode, coding agent, Copilot instructions, SDLC agent collaboration — directly maps to Domains A & E |
-| 2 | [skills/integrate-mcp-with-copilot](https://github.com/skills/integrate-mcp-with-copilot) | GitHub Skills exercise: MCP server integration, Agent Mode, issues → PR workflow — core for Domain B |
-| 3 | [github/github-mcp-server](https://github.com/github/github-mcp-server) | GitHub's official MCP Server: setup, tools, toolsets, repos, issues, PRs, Actions, code security — authoritative for MCP/permissions/tool-scope questions |
-| 4 | [github/awesome-copilot](https://github.com/github/awesome-copilot) | Community-contributed (treat as illustrative, not canonical): custom agents, instructions, skills, hooks, workflows, MCP references, Learning Hub |
-| 5 | [github-samples/copilot-in-a-box](https://github.com/github-samples/copilot-in-a-box) | GitHub DevRel hub: links to samples, walkthroughs, videos, MCP exercise, agents-in-SDLC workshop |
-| 6 | [github/copilot-sdk](https://github.com/github/copilot-sdk) | Public preview SDK: programmable agent workflows, tool invocation, custom agents, skills, MCP, hooks, permission handling |
-| 7 | [skills/getting-started-with-github-copilot](https://github.com/skills/getting-started-with-github-copilot) | Copilot basics: interaction modes, planning, PR summarization, review, Codespaces — use to confirm foundational coverage |
-| 8 | [github-samples/pets-workshop](https://github.com/github-samples/pets-workshop) | Broader DevOps context: Copilot, Actions, Codespaces, GHAS, secure workflows — useful for SDLC/CI/CD and security framing |
-| 9 | [microsoft/mcp-for-beginners](https://github.com/microsoft/mcp-for-beginners) | Official Microsoft MCP curriculum: server/client patterns, fundamentals — use after #2 and #3 |
-| 10 | [microsoft/ai-agents-for-beginners](https://github.com/microsoft/ai-agents-for-beginners) | Microsoft agent design patterns: planning, tool use, agentic RAG, multi-agent concepts — conceptual reinforcement only |
+In dev mode the sidebar shows a **Generate New Exam** panel. Enter a question count and choose a mode (Exam or Practice), then click **Generate Exam**. The server:
 
-### How source repos map to question domains
+1. Builds a **domain/item-type blueprint** (`src/blueprint.ts`) that distributes questions across the six GH-600 domains with weights close to the official exam distribution.
+2. Calls OpenAI in **batches** (`src/generation.ts`) — each batch targets a specific domain and question type, passing previously generated question stems to avoid duplicates.
+3. For case-study batches, already-used narrative themes are passed in the prompt so the generator avoids repeating them.
+4. Assembles and persists the finished `ExamSet` to `data/exams/exams.json`.
 
-| Domain | Primary sources | Secondary sources |
-|--------|----------------|-------------------|
-| A — Agent architecture + SDLC | #1 agents-in-sdlc, #5 copilot-in-a-box | #8 pets-workshop, #10 ai-agents-for-beginners |
-| B — MCP / tool use / permissions | #3 github-mcp-server, #2 integrate-mcp-with-copilot | #6 copilot-sdk, #9 mcp-for-beginners |
-| C — Governance, safety, policy | #3 github-mcp-server, #6 copilot-sdk | #4 awesome-copilot, #8 pets-workshop |
-| D — Evaluation, telemetry, tuning | #1 agents-in-sdlc, #6 copilot-sdk | #10 ai-agents-for-beginners |
-| E — Multi-agent orchestration | #1 agents-in-sdlc, #6 copilot-sdk | #9 mcp-for-beginners, #10 ai-agents-for-beginners |
+The UI shows live batch-by-batch progress via Server-Sent Events.
+
+### Taking an exam
+
+From the home screen, choose any available exam and a mode:
+
+- **🎯 Exam** — timed (`question_count × 1.2` minutes), answers hidden until you submit.
+- **📖 Practice** — untimed; correct answers are revealed immediately after each question so you can learn as you go.
+
+After submitting an exam you see a score breakdown by domain and can review every question with full explanations (why the correct answer is right, why each distractor is wrong).
+
+### Question types
+
+| Type | Description |
+|------|-------------|
+| `single_choice` | One correct answer from four options |
+| `multi_select` | Two or three correct answers |
+| `sequence_order` | Drag items into the correct order |
+| `matching_magnet` | Match left-column items to right-column items |
+| `code_or_config_artifact` | Scenario with an embedded YAML/JSON/log artifact |
+| `case_study_child` | Question that references a shared case-study scenario |
+
+### Domain distribution
+
+Questions are spread across the six official GH-600 exam domains:
+
+| Domain | Topic | Target weight |
+|--------|-------|--------------|
+| A | Agent architecture and SDLC processes | ~20% |
+| B | MCP / tool use and environment permissions | ~22% |
+| C | Memory, state, and execution | ~12% |
+| D | Evaluation, telemetry, error analysis, and tuning | ~18% |
+| E | Multi-agent orchestration and incident response | ~18% |
+| F | Guardrails, safety, accountability, and governance | ~10% |
+
+### Anti-bias enforcement
+
+Every generated exam is checked for answer-position bias (`src/antiBias.ts`): correct answers should be roughly equally distributed across positions A–D, and the longest option should not be correct more than ~30% of the time.
+
+---
+
+## Developer features (dev mode only)
+
+### Publish / unpublish exams
+
+Each exam row in dev mode has a **🔒 Unpublished / ✅ Published** toggle. Clicking it updates `data/published.json`, which controls what production users see. In production (`npm start`) only published exams are returned by the API.
+
+`data/published.json` format:
+```json
+{ "examIds": ["<uuid>", "..."] }
+```
+
+### PDF export
+
+Each exam row has two buttons:
+
+- **📄 Generate PDF** — calls `POST /api/exams/:id/pdf`, which uses Playwright/Chromium to render the full exam (with answers and explanations) as a print-quality PDF.
+- **⬇ Download PDF** — appears once the PDF exists; links directly to the file.
+
+PDFs are saved to `data/exams/` with a human-readable name:
+
+```
+gh-600-YYYY-MM-DD-<count>q-<id8>.pdf
+# e.g. gh-600-2026-05-22-100q-a1ac29d0.pdf
+```
+
+You can also generate a PDF from the command line:
+
+```bash
+npm run export-pdf -- <exam-id>
+```
+
+---
+
+## Project layout
+
+```
+src/
+  server.ts          Express server — all API routes and SSE generation stream
+  generation.ts      OpenAI batch generation, blueprint, assemble
+  blueprint.ts       Domain/item-type distribution logic
+  pdfExport.ts       Playwright HTML→PDF renderer (shared by server and CLI)
+  persistence.ts     Read/write exams and attempts to data/
+  scoring.ts         Score an attempt, domain breakdowns
+  studyLoops.ts      Weak-domain drills, mistake replay helpers
+  antiBias.ts        Answer-position and length-rank bias checks
+  types.ts           All TypeScript types (ExamSet, PracticeQuestion, Attempt, …)
+  validators.ts      Zod schemas for API request validation
+  config.ts          Runtime config (model, effort, dev/prod flags)
+
+public/
+  index.html         Single-page app shell
+  app.js             All frontend logic (exam list, question rendering, timer, review)
+  styles.css         UI styles
+
+prompts/
+  blueprint.prompt.md
+  generate-batch.prompt.md    Main generation prompt — includes domain boundary rules,
+                               anti-repetition instructions, and case-study theme avoidance
+  generate-case-study.prompt.md
+  validate-question.prompt.md
+  anti-bias-review.prompt.md
+  assemble-exam.prompt.md
+  weakness-drill.prompt.md
+  knowledge/
+    domain-A.md … domain-F.md   Per-domain knowledge injected at generation time
+    gh-600-study-guide.md
+
+scripts/
+  export-exam-pdf.ts   CLI wrapper around src/pdfExport.ts
+  generate.ts          Standalone generation script (no server)
+  fetch-knowledge.ts   Utility to refresh knowledge files
+
+data/
+  exams/exams.json     All generated exams (questions, case studies, anti-bias stats)
+  exams/*.pdf          Generated PDFs (human-readable filenames)
+  attempts/            One JSON file per exam attempt
+  published.json       IDs of exams visible in production
+
+tests/
+  schema.test.ts       Type/schema validation
+  scoring.test.ts      Scoring logic
+  blueprint.test.ts    Blueprint generation
+  studyLoops.test.ts   Study loop helpers
+  antiBias.test.ts     Anti-bias checks
+  fullMockOps.test.ts  Full generate → score round-trip (mocked OpenAI)
+  e2e/exam.spec.ts     Playwright end-to-end tests (run separately with Playwright)
+```
+
+---
+
+## API reference
+
+All JSON endpoints. `IS_DEV` endpoints return 403 in production.
+
+| Method | Path | Notes |
+|--------|------|-------|
+| `GET` | `/api/config` | `{ isDev, hasApiKey, examCount }` |
+| `GET` | `/api/exams` | List exams. Dev: all with `isPublished` flag. Prod: published only. |
+| `GET` | `/api/exams/:id` | Full exam (questions + case studies) |
+| `GET` | `/api/exams/generate` | SSE stream — generates exam in batches |
+| `GET` | `/api/exams/:id/pdf-status` | `{ exists, url, filename }` |
+| `POST` | `/api/exams/:id/pdf` | Generate PDF (IS_DEV) |
+| `POST` | `/api/exams/:id/publish` | Toggle publish `{ published: bool }` (IS_DEV) |
+| `POST` | `/api/exams/blueprint` | Create generation plan |
+| `POST` | `/api/questions/generate-batch` | Generate one batch |
+| `POST` | `/api/questions/validate-batch` | Validate a batch |
+| `POST` | `/api/exams/assemble` | Assemble questions into an ExamSet |
+| `POST` | `/api/attempts` | Submit an attempt; returns scored result |
+| `GET` | `/api/attempts/:id` | Fetch a stored attempt |
+| `GET` | `/healthz` | Health check |
+
+---
+
+## Reference sources for question content
+
+Use only these verified GitHub/Microsoft repositories as primary material. Avoid braindump sites.
+
+| Priority | Repository | Why it matters |
+|----------|-----------|----------------|
+| 1 | [github-samples/agents-in-sdlc](https://github.com/github-samples/agents-in-sdlc) | Copilot Agent Mode, coding agent, SDLC collaboration — Domains A & E |
+| 2 | [skills/integrate-mcp-with-copilot](https://github.com/skills/integrate-mcp-with-copilot) | MCP server integration, Agent Mode, issues → PR — Domain B |
+| 3 | [github/github-mcp-server](https://github.com/github/github-mcp-server) | Authoritative MCP server: tools, toolsets, permissions — Domain B |
+| 4 | [github/awesome-copilot](https://github.com/github/awesome-copilot) | Custom agents, instructions, hooks, MCP references (illustrative) |
+| 5 | [github-samples/copilot-in-a-box](https://github.com/github-samples/copilot-in-a-box) | DevRel hub: samples, walkthroughs, MCP exercise |
+| 6 | [github/copilot-sdk](https://github.com/github/copilot-sdk) | Programmable agent workflows, tool invocation, hooks — Domains A, B, D |
+| 7 | [skills/getting-started-with-github-copilot](https://github.com/skills/getting-started-with-github-copilot) | Copilot basics — foundational coverage |
+| 8 | [github-samples/pets-workshop](https://github.com/github-samples/pets-workshop) | Actions, Codespaces, GHAS, secure workflows |
+| 9 | [microsoft/mcp-for-beginners](https://github.com/microsoft/mcp-for-beginners) | MCP server/client patterns and fundamentals |
+| 10 | [microsoft/ai-agents-for-beginners](https://github.com/microsoft/ai-agents-for-beginners) | Agent design patterns: planning, tool use, multi-agent |

@@ -1,4 +1,4 @@
-# GH-600 Prep — App Plan
+# GitHub Certified: Agentic AI Developer (GH-600) — App Plan
 
 Canonical planning reference for this repository.
 

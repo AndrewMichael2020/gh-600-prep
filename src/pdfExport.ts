@@ -175,7 +175,7 @@ function buildHtml(exam: ExamSet): string {  const date = new Date(exam.createdA
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>GH-600 Practice Exam — ${date}</title>
+  <title>GitHub Certified: Agentic AI Developer (GH-600) — ${date}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: "Segoe UI", Arial, sans-serif; font-size: 11pt; color: #1f2328; line-height: 1.5; }
@@ -262,8 +262,8 @@ function buildHtml(exam: ExamSet): string {  const date = new Date(exam.createdA
   <!-- Cover -->
   <div class="cover">
     <div style="font-size:48pt;margin-bottom:16px;">⚡</div>
-    <h1>GH-600 Practice Exam</h1>
-    <div class="subtitle">Developing in Agentic AI Systems — Practice Mode</div>
+    <h1>GitHub Certified: Agentic AI Developer</h1>
+    <div class="subtitle">GH-600 Beta — Practice Exam</div>
     <div class="meta">
       ${exam.questions.length} questions &nbsp;·&nbsp; ${date}<br/>
       <small>Correct answers highlighted · Full explanations included</small>

@@ -1,7 +1,7 @@
 {
   "name": "gh-600-prep",
   "version": "1.0.0",
-  "description": "Preparing for GH-600 (beta).",
+  "description": "Study app for GitHub Certified: Agentic AI Developer (GH-600 beta).",
   "main": "index.js",
   "scripts": {
     "test": "vitest run",
