@@ -26,6 +26,8 @@ SA_NAME="gh-600-prep-deploy"
 SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 WIF_POOL="github-actions"
 WIF_PROVIDER="github"
+WIF_TRUSTED_REF="refs/heads/main"
+WIF_ATTRIBUTE_CONDITION="assertion.repository == '${GH_REPO}' && assertion.ref == '${WIF_TRUSTED_REF}'"
 
 echo "=== GCP setup for ${PROJECT_ID} ==="
 gcloud config set project "${PROJECT_ID}"
@@ -94,14 +96,26 @@ gcloud iam workload-identity-pools create "${WIF_POOL}" \
   --location="global" \
   --display-name="GitHub Actions pool" 2>/dev/null || echo "  (pool already exists)"
 
-gcloud iam workload-identity-pools providers create-oidc "${WIF_PROVIDER}" \
+if gcloud iam workload-identity-pools providers describe "${WIF_PROVIDER}" \
   --project="${PROJECT_ID}" \
   --location="global" \
-  --workload-identity-pool="${WIF_POOL}" \
-  --display-name="GitHub OIDC provider" \
-  --issuer-uri="https://token.actions.githubusercontent.com" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref" \
-  --attribute-condition="assertion.repository == '${GH_REPO}'" 2>/dev/null || echo "  (provider already exists)"
+  --workload-identity-pool="${WIF_POOL}" &>/dev/null; then
+  gcloud iam workload-identity-pools providers update-oidc "${WIF_PROVIDER}" \
+    --project="${PROJECT_ID}" \
+    --location="global" \
+    --workload-identity-pool="${WIF_POOL}" \
+    --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref" \
+    --attribute-condition="${WIF_ATTRIBUTE_CONDITION}"
+else
+  gcloud iam workload-identity-pools providers create-oidc "${WIF_PROVIDER}" \
+    --project="${PROJECT_ID}" \
+    --location="global" \
+    --workload-identity-pool="${WIF_POOL}" \
+    --display-name="GitHub OIDC provider" \
+    --issuer-uri="https://token.actions.githubusercontent.com" \
+    --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref" \
+    --attribute-condition="${WIF_ATTRIBUTE_CONDITION}"
+fi
 
 WIF_PROVIDER_RESOURCE="projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WIF_POOL}/providers/${WIF_PROVIDER}"
 
