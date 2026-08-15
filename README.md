@@ -1,13 +1,52 @@
-# gh-600-prep
+# Certification Exam Lab
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-20%2B-339933?logo=nodedotjs&logoColor=white)
 ![Vitest](https://img.shields.io/badge/tests-Vitest-6E9F18?logo=vitest&logoColor=white)
 ![Playwright](https://img.shields.io/badge/e2e-Playwright-2EAD33?logo=playwright&logoColor=white)
 ![OpenAI](https://img.shields.io/badge/API-OpenAI-412991?logo=openai&logoColor=white)
+[![Current pack: GH-600](https://img.shields.io/badge/current%20pack-GH--600-0969DA)](#current-exam-pack-gh-600)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](./LICENSE)
 
-A full-stack TypeScript study app for the **GitHub Certified: Agentic AI Developer** (GH-600 beta) certification. It uses the OpenAI API to generate realistic, scenario-driven practice exams, lets you take them in timed **Exam** or self-paced **Practice** mode, and exports any exam to a human-readable PDF.
+A full-stack TypeScript engine for designing, generating, reviewing, taking, analysing, and exporting
+demanding certification practice exams. The product direction covers **Microsoft**, **GitHub**, and
+other technically deep certification programs—not agentic AI alone.
+
+The first implemented and versioned exam pack is **GitHub Certified: Agentic AI Developer
+(GH-600 beta)**. Its domain blueprint, official-source knowledge, prompts, examples, and UI copy are
+included in this repository today. The exam/practice experience, scoring, analytics, study loops,
+publishing, and PDF pipeline form the reusable engine; extracting GH-600 into a clean pack interface
+is tracked in [Issue #15](https://github.com/AndrewMichael2020/agentic-certification-lab/issues/15).
+
+> [!IMPORTANT]
+> This is an independent, unofficial practice resource. It is not affiliated with, authorized,
+> sponsored, endorsed, or approved by GitHub or Microsoft. Practice scores are learning feedback,
+> not predictions of an official scaled score or pass/fail result.
+
+---
+
+## Portfolio proof
+
+| Evidence | What it demonstrates |
+|---|---|
+| [100-question GH-600 PDF](data/exams/gh-600-2026-05-22-100q-a1ac29d0.pdf) | Human-readable export of a complete generated practice set |
+| [Generated exam corpus](data/exams/exams.json) | Structured questions, case studies, explanations, sources, and anti-bias statistics |
+| [Unit and mocked full-flow tests](tests) | Blueprinting, schema validation, scoring, study loops, anti-bias checks, and generate-to-score flow |
+| [Cloud Run deployment workflow](.github/workflows/ci.yml) | Test/build gates, keyless GCP federation, container publication, deployment, and health verification |
+| [Production-readiness issue](https://github.com/AndrewMichael2020/agentic-certification-lab/issues/14) | Known security, ethics, provenance, licensing, and release work tracked explicitly |
+
+What is working now:
+
+- scenario-driven single-choice, multi-select, sequence, matching, artifact, and case-study items;
+- timed Exam and self-paced Practice modes with explanations and domain analytics;
+- weak-domain drills, mistake replay, confidence capture, and response-time reporting;
+- batched OpenAI generation grounded in an exam-specific knowledge pack;
+- answer-position and option-length bias measurement;
+- developer-controlled publication plus browser and CLI PDF export.
+
+No live-demo or workflow-status badge is shown yet: the latest main deployment workflow is not green,
+and [Issue #15](https://github.com/AndrewMichael2020/agentic-certification-lab/issues/15) correctly
+requires working proof before advertising either.
 
 ---
 
@@ -57,7 +96,35 @@ PORT=3000
 
 ---
 
-## How it works
+## Engine architecture
+
+```text
+versioned exam pack
+  blueprint + objectives + official sources + prompts
+                         ↓
+              batched generation and review
+                         ↓
+               validated structured ExamSet
+                         ↓
+       exam / practice UI ─ scoring ─ study loops
+                         ↓
+            publication + analytics + PDF export
+```
+
+| Reusable engine today | GH-600-specific pack today |
+|---|---|
+| Express API and SSE progress | Six-domain blueprint and target weights |
+| Batched generation pipeline | `examCode: "GH-600"` type constraint |
+| Exam and Practice interaction modes | GitHub/Microsoft agentic-AI source registry |
+| Scoring, review, analytics, and drills | Domain A–F knowledge and prompt files |
+| JSON persistence and publication controls | GH-600 UI labels, filenames, and deployment names |
+| Playwright PDF renderer and GCS upload | GH-600 sample exams and PDFs |
+
+This boundary is intentionally explicit. The application has a reusable certification-exam core,
+but a second Microsoft or GitHub certification must not be claimed as supported until its blueprint,
+source snapshot, prompts, validation fixtures, labels, and release evidence are versioned as a pack.
+
+## Current exam pack: GH-600
 
 ### Generating an exam (dev mode)
 
@@ -92,7 +159,7 @@ After submitting an exam you see a score breakdown by domain and can review ever
 
 ### Domain distribution
 
-Questions are spread across the six official GH-600 exam domains:
+The current pack spreads questions across the six GH-600 exam domains:
 
 | Domain | Topic | Target weight |
 |--------|-------|--------------|
@@ -103,9 +170,30 @@ Questions are spread across the six official GH-600 exam domains:
 | E | Multi-agent orchestration and incident response | ~18% |
 | F | Guardrails, safety, accountability, and governance | ~10% |
 
-### Anti-bias enforcement
+### Extending to other Microsoft and GitHub certifications
 
-Every generated exam is checked for answer-position bias (`src/antiBias.ts`): correct answers should be roughly equally distributed across positions A–D. The generation prompt also enforces that the shortest/second-shortest option is correct ≥50% of the time and the longest option is correct ≤10% of the time — countering the LLM tendency to make longer answers correct.
+The intended next architecture step is a versioned pack contract rather than copy-pasting GH-600
+logic. Each new certification pack should provide:
+
+1. vendor, exam code, display name, blueprint version, and an as-of date;
+2. official objective domains, weights, aliases, and supported question formats;
+3. an allowlisted primary-source registry and refresh policy;
+4. generation, review, and explanation prompts scoped to that blueprint;
+5. validation fixtures for distribution, scoring, source support, and UI rendering;
+6. a release record with human sampling, known limitations, and sample output.
+
+That separation will let the same engine host hard Microsoft and GitHub exam families without
+mixing objectives, silently reusing stale sources, or presenting one certification's heuristics as
+universal exam rules.
+
+### Anti-bias measurement
+
+Every generated exam is measured for answer-position bias (`src/antiBias.ts`), with a target of
+roughly balanced correct-answer positions A–D. The generation prompt also asks for the
+shortest/second-shortest option to be correct at least 50% of the time and the longest option at most
+10% of the time. Those percentages are quality targets, not release guarantees; empirical tuning and
+stronger release checks remain tracked in
+[Issue #14](https://github.com/AndrewMichael2020/agentic-certification-lab/issues/14).
 
 ---
 
@@ -201,7 +289,9 @@ tests/
 
 ## API reference
 
-All JSON endpoints. `IS_DEV` endpoints return 403 in production.
+All JSON endpoints. The publish and PDF-generation routes currently return 403 outside dev mode;
+the other generation and mutation routes are not yet a complete authorization boundary. See the
+production warning below and [Issue #14](https://github.com/AndrewMichael2020/agentic-certification-lab/issues/14).
 
 | Method | Path | Notes |
 |--------|------|-------|
@@ -224,9 +314,17 @@ All JSON endpoints. `IS_DEV` endpoints return 403 in production.
 
 ## CI / CD and production deployment
 
+> [!WARNING]
+> Do not treat the current Cloud Run path as a production-ready public multi-user service. The
+> authorization, publication-boundary, privacy, content-review, and dependency-remediation work in
+> [Issue #14](https://github.com/AndrewMichael2020/agentic-certification-lab/issues/14) must be
+> completed first. The latest `main` workflow is also failing, so deployment is documented here as
+> implemented infrastructure—not advertised as a working live demo.
+
 ### GitHub Actions pipeline
 
-Every push triggers `.github/workflows/ci.yml`, which runs three jobs:
+The workflow defines test and build jobs for every push and pull request, plus a deployment job for
+direct pushes to `main`:
 
 | Job | Trigger | What it does |
 |-----|---------|-------------|
@@ -307,3 +405,14 @@ Use only these verified GitHub/Microsoft repositories as primary material. Avoid
 | 8 | [github-samples/pets-workshop](https://github.com/github-samples/pets-workshop) | Actions, Codespaces, GHAS, secure workflows |
 | 9 | [microsoft/mcp-for-beginners](https://github.com/microsoft/mcp-for-beginners) | MCP server/client patterns and fundamentals |
 | 10 | [microsoft/ai-agents-for-beginners](https://github.com/microsoft/ai-agents-for-beginners) | Agent design patterns: planning, tool use, multi-agent |
+
+---
+
+## Responsible use and licence
+
+- Build original practice material from public, primary documentation; do not use braindumps,
+  remembered live questions, or confidential exam content.
+- Generated questions require source-backed review and human sampling before release.
+- Never expose `OPENAI_API_KEY` to the browser or commit it to the repository.
+- The repository licence is [GPL-3.0](LICENSE). The inconsistent `ISC` package metadata is a known
+  reconciliation item in [Issue #14](https://github.com/AndrewMichael2020/agentic-certification-lab/issues/14).
