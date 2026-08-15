@@ -10,7 +10,7 @@
 
 A full-stack TypeScript engine for designing, generating, reviewing, taking, analysing, and exporting
 demanding certification practice exams. The product direction covers **Microsoft**, **GitHub**, and
-other technically deep certification programs—not agentic AI alone.
+other technically deep certification programs.
 
 The first implemented and versioned exam pack is **GitHub Certified: Agentic AI Developer
 (GH-600 beta)**. Its domain blueprint, official-source knowledge, prompts, examples, and UI copy are
