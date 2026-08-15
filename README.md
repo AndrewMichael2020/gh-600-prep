@@ -16,7 +16,7 @@ The first implemented and versioned exam pack is **GitHub Certified: Agentic AI 
 (GH-600 beta)**. Its domain blueprint, official-source knowledge, prompts, examples, and UI copy are
 included in this repository today. The exam/practice experience, scoring, analytics, study loops,
 publishing, and PDF pipeline form the reusable engine; extracting GH-600 into a clean pack interface
-is tracked in [Issue #15](https://github.com/AndrewMichael2020/agentic-certification-lab/issues/15).
+is tracked in [Issue #15](https://github.com/AndrewMichael2020/certification-exam-lab/issues/15).
 
 > [!IMPORTANT]
 > This is an independent, unofficial practice resource. It is not affiliated with, authorized,
@@ -33,7 +33,7 @@ is tracked in [Issue #15](https://github.com/AndrewMichael2020/agentic-certifica
 | [Generated exam corpus](data/exams/exams.json) | Structured questions, case studies, explanations, sources, and anti-bias statistics |
 | [Unit and mocked full-flow tests](tests) | Blueprinting, schema validation, scoring, study loops, anti-bias checks, and generate-to-score flow |
 | [Cloud Run deployment workflow](.github/workflows/ci.yml) | Test/build gates, keyless GCP federation, container publication, deployment, and health verification |
-| [Production-readiness issue](https://github.com/AndrewMichael2020/agentic-certification-lab/issues/14) | Known security, ethics, provenance, licensing, and release work tracked explicitly |
+| [Production-readiness issue](https://github.com/AndrewMichael2020/certification-exam-lab/issues/14) | Known security, ethics, provenance, licensing, and release work tracked explicitly |
 
 What is working now:
 
@@ -45,7 +45,7 @@ What is working now:
 - developer-controlled publication plus browser and CLI PDF export.
 
 No live-demo or workflow-status badge is shown yet: the latest main deployment workflow is not green,
-and [Issue #15](https://github.com/AndrewMichael2020/agentic-certification-lab/issues/15) correctly
+and [Issue #15](https://github.com/AndrewMichael2020/certification-exam-lab/issues/15) correctly
 requires working proof before advertising either.
 
 ---
@@ -193,7 +193,7 @@ roughly balanced correct-answer positions A–D. The generation prompt also asks
 shortest/second-shortest option to be correct at least 50% of the time and the longest option at most
 10% of the time. Those percentages are quality targets, not release guarantees; empirical tuning and
 stronger release checks remain tracked in
-[Issue #14](https://github.com/AndrewMichael2020/agentic-certification-lab/issues/14).
+[Issue #14](https://github.com/AndrewMichael2020/certification-exam-lab/issues/14).
 
 ---
 
@@ -291,7 +291,7 @@ tests/
 
 All JSON endpoints. The publish and PDF-generation routes currently return 403 outside dev mode;
 the other generation and mutation routes are not yet a complete authorization boundary. See the
-production warning below and [Issue #14](https://github.com/AndrewMichael2020/agentic-certification-lab/issues/14).
+production warning below and [Issue #14](https://github.com/AndrewMichael2020/certification-exam-lab/issues/14).
 
 | Method | Path | Notes |
 |--------|------|-------|
@@ -317,7 +317,7 @@ production warning below and [Issue #14](https://github.com/AndrewMichael2020/ag
 > [!WARNING]
 > Do not treat the current Cloud Run path as a production-ready public multi-user service. The
 > authorization, publication-boundary, privacy, content-review, and dependency-remediation work in
-> [Issue #14](https://github.com/AndrewMichael2020/agentic-certification-lab/issues/14) must be
+> [Issue #14](https://github.com/AndrewMichael2020/certification-exam-lab/issues/14) must be
 > completed first. The latest `main` workflow is also failing, so deployment is documented here as
 > implemented infrastructure—not advertised as a working live demo.
 
@@ -415,4 +415,4 @@ Use only these verified GitHub/Microsoft repositories as primary material. Avoid
 - Generated questions require source-backed review and human sampling before release.
 - Never expose `OPENAI_API_KEY` to the browser or commit it to the repository.
 - The repository licence is [GPL-3.0](LICENSE). The inconsistent `ISC` package metadata is a known
-  reconciliation item in [Issue #14](https://github.com/AndrewMichael2020/agentic-certification-lab/issues/14).
+  reconciliation item in [Issue #14](https://github.com/AndrewMichael2020/certification-exam-lab/issues/14).
