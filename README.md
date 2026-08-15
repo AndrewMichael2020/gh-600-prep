@@ -1,5 +1,12 @@
 # gh-600-prep
 
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-20%2B-339933?logo=nodedotjs&logoColor=white)
+![Vitest](https://img.shields.io/badge/tests-Vitest-6E9F18?logo=vitest&logoColor=white)
+![Playwright](https://img.shields.io/badge/e2e-Playwright-2EAD33?logo=playwright&logoColor=white)
+![OpenAI](https://img.shields.io/badge/API-OpenAI-412991?logo=openai&logoColor=white)
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](./LICENSE)
+
 A full-stack TypeScript study app for the **GitHub Certified: Agentic AI Developer** (GH-600 beta) certification. It uses the OpenAI API to generate realistic, scenario-driven practice exams, lets you take them in timed **Exam** or self-paced **Practice** mode, and exports any exam to a human-readable PDF.
 
 ---
